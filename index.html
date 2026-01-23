@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Nexus ERP</title>
+    <title>Gestão Pedidos GNV</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
       tailwind.config = {
@@ -11,10 +11,10 @@
         theme: {
           extend: {
             colors: {
-              background: '#020617', // slate-950
-              surface: '#0f172a', // slate-900
-              border: '#1e293b', // slate-800
-              primary: '#3b82f6', // blue-500
+              background: 'rgb(var(--background) / <alpha-value>)',
+              surface: 'rgb(var(--surface) / <alpha-value>)',
+              border: 'rgb(var(--border) / <alpha-value>)',
+              primary: '#3b82f6',
             },
             fontFamily: {
               sans: ['Inter', 'sans-serif'],
@@ -25,18 +25,38 @@
     </script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
+      :root {
+        /* Light Mode Variables (Default) */
+        --background: 248 250 252; /* slate-50 */
+        --surface: 255 255 255;     /* white */
+        --border: 226 232 240;      /* slate-200 */
+        --text-primary: 15 23 42;   /* slate-900 */
+        --text-secondary: 100 116 139; /* slate-500 */
+      }
+
+      .dark {
+        /* Dark Mode Variables */
+        --background: 2 6 23;    /* slate-950 */
+        --surface: 15 23 42;     /* slate-900 */
+        --border: 30 41 59;      /* slate-800 */
+        --text-primary: 248 250 252; /* slate-50 */
+        --text-secondary: 148 163 184; /* slate-400 */
+      }
+
       body {
         font-family: 'Inter', sans-serif;
-        background-color: #020617;
-        color: #f8fafc;
+        background-color: rgb(var(--background));
+        color: rgb(var(--text-primary));
+        transition: background-color 0.3s, color 0.3s;
       }
-      /* Custom scrollbar for dark theme */
+      
+      /* Custom scrollbar */
       ::-webkit-scrollbar {
         width: 8px;
         height: 8px;
       }
       ::-webkit-scrollbar-track {
-        background: #0f172a;
+        background: rgb(var(--surface));
       }
       ::-webkit-scrollbar-thumb {
         background: #334155;

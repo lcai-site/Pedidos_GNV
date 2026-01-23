@@ -1,5 +1,12 @@
 export type StatusType = 'Aprovado' | 'Enviado' | 'Pendente' | 'Waiting Payment' | 'Cancelado' | 'Reembolsado' | 'Chargeback' | 'Ativa' | 'Atrasada';
 
+export interface Profile {
+  id: string;
+  email: string;
+  role: 'usuario' | 'gestor' | string;
+  created_at: string;
+}
+
 export interface PedidoUnificado {
   id: string;
   created_at: string;
@@ -32,7 +39,9 @@ export interface Pedido {
   valor_total: number;
   cliente: string;
   cpf: string;
+  email?: string; // Adicionado email como opcional
   metodo_pagamento?: string; // pix, boleto, credit_card
+  [key: string]: any; // Flexibilidade para outros campos
 }
 
 export interface Assinatura {
@@ -53,7 +62,20 @@ export interface CarrinhoAbandonado {
 
 export interface DashboardMetrics {
   faturamentoAprovado: number;
+  countAprovado: number; // Novo
+
   faturamentoPendente: number;
+  countPendente: number; // Novo
+
+  faturamentoExpirado: number;
+  countExpirado: number; // Novo
+
+  faturamentoRecusado: number;
+  countRecusado: number; // Novo
+
+  faturamentoReembolsado: number;
+  countReembolsado: number; // Novo
+
   detalhePendente: {
     pix: number;
     boleto: number;
