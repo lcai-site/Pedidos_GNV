@@ -1,0 +1,5 @@
+{
+  "name": "Nexus ERP - E-commerce Logistics",
+  "description": "A high-performance Logistics and Finance ERP dashboard integrated with Ticto and Supabase, featuring dark mode, real-time tracking, and fraud detection.",
+  "requestFramePermissions": []
+}
