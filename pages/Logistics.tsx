@@ -4,7 +4,7 @@ import { PedidoUnificado } from '../types';
 import { StatusBadge } from '../components/ui/StatusBadge';
 import { TableSkeleton } from '../components/ui/Skeleton';
 import { Modal } from '../components/ui/Modal';
-import { Search, Printer, Truck, AlertTriangle, Save, Pencil, User, MapPin, Phone, FileText, CheckCircle2, Home } from 'lucide-react';
+import { Search, Printer, Truck, AlertTriangle, Save, Pencil, User, MapPin, Phone, FileText, CheckCircle2, Home, Mail } from 'lucide-react';
 
 export const Logistics: React.FC = () => {
   const [orders, setOrders] = useState<PedidoUnificado[]>([]);
@@ -21,6 +21,7 @@ export const Logistics: React.FC = () => {
     nome: '',
     cpf: '',
     telefone: '',
+    email: '', // Novo campo
     cep: '',
     logradouro: '',
     numero: '',
@@ -68,6 +69,7 @@ export const Logistics: React.FC = () => {
     nome: ['nome_cliente', 'cliente_nome', 'cliente', 'nome', 'full_name', 'name', 'buyer_name'],
     cpf: ['cpf', 'cliente_cpf', 'doc', 'documento', 'cpf_cliente', 'tax_id', 'vat_number'],
     phone: ['telefone', 'cliente_telefone', 'phone', 'celular', 'whatsapp', 'phone_number', 'mobile'],
+    email: ['email', 'cliente_email', 'contact_email', 'buyer_email', 'user_email'],
     zip: ['cep', 'zip', 'zipcode', 'zip_code', 'postal_code'],
     street: ['rua', 'logradouro', 'street', 'street_name', 'address_line_1', 'endereco_rua', 'thoroughfare'],
     number: ['numero', 'number', 'street_number', 'num', 'endereco_numero', 'house_number'],
@@ -202,6 +204,7 @@ export const Logistics: React.FC = () => {
       nome: getDeepVal(order, keys.nome),
       cpf: getDeepVal(order, keys.cpf),
       telefone: getDeepVal(order, keys.phone),
+      email: getDeepVal(order, keys.email), // Carrega email
       cep,
       logradouro,
       numero,
@@ -215,6 +218,20 @@ export const Logistics: React.FC = () => {
     setIsEditModalOpen(true);
   };
 
+  // Helper para decidir qual chave usar no Update
+  // Ex: Se o objeto original tem 'cliente_telefone', usa essa chave. Se não, usa 'telefone'.
+  const resolveUpdateKey = (order: any, candidates: string[], defaultKey: string) => {
+     if (!order) return defaultKey;
+     for (const key of candidates) {
+         if (Object.prototype.hasOwnProperty.call(order, key)) return key;
+     }
+     // Fallback: tenta ver se alguma das chaves tem valor não nulo
+     for (const key of candidates) {
+        if (order[key] !== undefined) return key;
+     }
+     return defaultKey;
+  };
+
   const handleEditSave = async () => {
     if (!editingOrder) return;
     setSaving(true);
@@ -222,20 +239,36 @@ export const Logistics: React.FC = () => {
     try {
       const enderecoCompleto = `${editForm.logradouro}, ${editForm.numero} ${editForm.complemento ? '- ' + editForm.complemento : ''} - ${editForm.bairro}, ${editForm.cidade} - ${editForm.estado}, ${editForm.cep}`.replace(/, ,/g, ',');
 
-      const updates: any = {
-        nome_cliente: editForm.nome,
-        cpf: editForm.cpf,
-        telefone: editForm.telefone,
-        cep: editForm.cep,
-        rua: editForm.logradouro,
-        numero: editForm.numero,
-        complemento: editForm.complemento,
-        bairro: editForm.bairro,
-        cidade: editForm.cidade,
-        estado: editForm.estado,
-        endereco_completo: enderecoCompleto,
-        endereco: enderecoCompleto 
-      };
+      // Descobre os nomes corretos das colunas para este registro específico
+      const phoneKey = resolveUpdateKey(editingOrder, ['cliente_telefone', 'telefone', 'phone', 'celular'], 'telefone');
+      const emailKey = resolveUpdateKey(editingOrder, ['cliente_email', 'email', 'contact_email'], 'email');
+      const nameKey = resolveUpdateKey(editingOrder, ['nome_cliente', 'cliente_nome', 'nome'], 'nome_cliente');
+      const cpfKey = resolveUpdateKey(editingOrder, ['cliente_cpf', 'cpf'], 'cpf');
+
+      // Monta o objeto de update usando as chaves corretas
+      const updates: any = {};
+      
+      // Dados Pessoais
+      updates[nameKey] = editForm.nome;
+      updates[cpfKey] = editForm.cpf;
+      updates[phoneKey] = editForm.telefone;
+      updates[emailKey] = editForm.email;
+
+      // Dados de Endereço (tenta chaves padrão, o Supabase ignora se não existir ou dá erro? 
+      // Idealmente deveríamos checar também, mas endereço é mais padronizado na sua estrutura)
+      updates['cep'] = editForm.cep;
+      updates['rua'] = editForm.logradouro;
+      updates['numero'] = editForm.numero;
+      updates['complemento'] = editForm.complemento;
+      updates['bairro'] = editForm.bairro;
+      updates['cidade'] = editForm.cidade;
+      updates['estado'] = editForm.estado;
+      
+      // Endereço completo concatenado
+      updates['endereco_completo'] = enderecoCompleto;
+      // updates['endereco'] = enderecoCompleto; // Cuidado ao duplicar updates, pode confundir triggers
+
+      console.log("Saving updates with keys:", { phoneKey, emailKey, nameKey, updates });
 
       const { error } = await supabase
         .from('pedidos_unificados')
@@ -244,12 +277,14 @@ export const Logistics: React.FC = () => {
 
       if (error) {
          console.warn("Update falhou, tentando fallback simples...", error);
-         const simpleUpdates = {
-             nome_cliente: editForm.nome,
-             cpf: editForm.cpf,
-             telefone: editForm.telefone,
+         // Fallback para update simplificado se o anterior falhar por coluna inexistente
+         const simpleUpdates: any = {
              endereco_completo: enderecoCompleto
          };
+         // Tenta chaves hardcoded mais prováveis
+         simpleUpdates['telefone'] = editForm.telefone; 
+         simpleUpdates['email'] = editForm.email;
+         
          await supabase.from('pedidos_unificados').update(simpleUpdates).eq('id', editingOrder.id);
       }
 
@@ -257,7 +292,7 @@ export const Logistics: React.FC = () => {
       setIsEditModalOpen(false);
     } catch (error) {
       console.error("Error updating order:", error);
-      alert("Erro ao atualizar dados.");
+      alert("Erro ao atualizar dados. Verifique o console.");
     } finally {
       setSaving(false);
     }
@@ -265,7 +300,6 @@ export const Logistics: React.FC = () => {
 
   const getFraudRisk = (order: PedidoUnificado) => {
     const cpf = getDeepVal(order, keys.cpf);
-    // Para fraude, usamos o endereço completo concatenado ou o que tiver
     const address = getDeepVal(order, keys.fullAddress) || getDeepVal(order, keys.street);
 
     if (!cpf) return false;
@@ -283,7 +317,6 @@ export const Logistics: React.FC = () => {
     return hasDifferentAddress;
   };
 
-  // Helper para exibir endereço na tabela (sem quebrar layout)
   const getDisplayAddress = (order: PedidoUnificado) => {
      const street = getDeepVal(order, keys.street);
      const num = getDeepVal(order, keys.number);
@@ -302,13 +335,14 @@ export const Logistics: React.FC = () => {
     
     const pkgDesc = String(order.descricao_pacote || '').toLowerCase();
     const name = String(getDeepVal(order, keys.nome)).toLowerCase();
+    const email = String(getDeepVal(order, keys.email)).toLowerCase();
     const fullAddr = String(getDisplayAddress(order)).toLowerCase();
     const rawGroup = order.codigos_agrupados;
     const groupCode = Array.isArray(rawGroup) 
       ? rawGroup.join(' ').toLowerCase() 
       : String(rawGroup || '').toLowerCase();
 
-    return pkgDesc.includes(term) || name.includes(term) || groupCode.includes(term) || fullAddr.includes(term);
+    return pkgDesc.includes(term) || name.includes(term) || email.includes(term) || groupCode.includes(term) || fullAddr.includes(term);
   });
 
   return (
@@ -336,7 +370,7 @@ export const Logistics: React.FC = () => {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 w-4 h-4" />
             <input 
               type="text" 
-              placeholder="Buscar por cliente, endereço, pacote ou SKU..." 
+              placeholder="Buscar por cliente, email, endereço, pacote ou SKU..." 
               className="w-full bg-slate-950 border border-border rounded-lg pl-10 pr-4 py-2 text-sm text-slate-200 focus:outline-none focus:border-blue-500 transition-colors"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
@@ -371,6 +405,7 @@ export const Logistics: React.FC = () => {
                     const isRisk = getFraudRisk(order);
                     const clientName = getDeepVal(order, keys.nome) || 'Cliente sem nome';
                     const clientCpf = getDeepVal(order, keys.cpf) || 'CPF N/A';
+                    const clientEmail = getDeepVal(order, keys.email);
                     const displayCodes = formatGroupCodes(order.codigos_agrupados);
                     const addressDisplay = getDisplayAddress(order);
 
@@ -394,7 +429,8 @@ export const Logistics: React.FC = () => {
                             <span className="text-slate-300 font-medium">{clientName}</span>
                             <div className="flex flex-col mt-1">
                                 <span className="text-xs text-slate-500">{clientCpf}</span>
-                                <span className="text-xs text-slate-400 truncate" title={addressDisplay}>{addressDisplay}</span>
+                                {clientEmail && <span className="text-xs text-slate-500 truncate">{clientEmail}</span>}
+                                <span className="text-xs text-slate-400 truncate mt-1" title={addressDisplay}>{addressDisplay}</span>
                             </div>
                           </div>
                         </td>
@@ -433,7 +469,7 @@ export const Logistics: React.FC = () => {
                              <button 
                                 onClick={() => openEditModal(order)}
                                 className="text-slate-400 hover:text-blue-400 p-2 hover:bg-slate-800 rounded transition-colors"
-                                title="Editar Endereço"
+                                title="Editar Dados"
                              >
                                 <Pencil className="w-4 h-4" />
                              </button>
@@ -455,7 +491,7 @@ export const Logistics: React.FC = () => {
         </div>
       </div>
 
-      {/* Edit Modal (Desmembrado) */}
+      {/* Edit Modal (Desmembrado e com Email) */}
       <Modal 
         isOpen={isEditModalOpen} 
         onClose={() => setIsEditModalOpen(false)}
@@ -489,17 +525,31 @@ export const Logistics: React.FC = () => {
              </div>
           </div>
 
-          <div className="space-y-2">
-             <label className="text-xs font-medium text-slate-400 flex items-center gap-2">
-                <Phone className="w-3 h-3" /> Telefone / WhatsApp
-             </label>
-             <input 
-                type="text" 
-                value={editForm.telefone}
-                onChange={e => setEditForm({...editForm, telefone: e.target.value})}
-                placeholder="+55 (11) 99999-9999"
-                className="w-full bg-slate-950 border border-border rounded-lg px-3 py-2 text-slate-200 focus:border-blue-500 outline-none"
-             />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+                <label className="text-xs font-medium text-slate-400 flex items-center gap-2">
+                    <Phone className="w-3 h-3" /> Telefone / WhatsApp
+                </label>
+                <input 
+                    type="text" 
+                    value={editForm.telefone}
+                    onChange={e => setEditForm({...editForm, telefone: e.target.value})}
+                    placeholder="+55 (11) 99999-9999"
+                    className="w-full bg-slate-950 border border-border rounded-lg px-3 py-2 text-slate-200 focus:border-blue-500 outline-none"
+                />
+            </div>
+             <div className="space-y-2">
+                <label className="text-xs font-medium text-slate-400 flex items-center gap-2">
+                    <Mail className="w-3 h-3" /> Email
+                </label>
+                <input 
+                    type="email" 
+                    value={editForm.email}
+                    onChange={e => setEditForm({...editForm, email: e.target.value})}
+                    placeholder="cliente@email.com"
+                    className="w-full bg-slate-950 border border-border rounded-lg px-3 py-2 text-slate-200 focus:border-blue-500 outline-none"
+                />
+            </div>
           </div>
 
           {/* Endereço Desmembrado */}
