@@ -16,6 +16,7 @@ export interface PedidoUnificado {
   codigo_rastreio: string | null;
   observacao?: string; // Campo novo para notas internas
   foi_editado?: boolean; // Campo novo para marcar edição manual
+  campos_alterados?: string[]; // Lista de campos que foram modificados (ex: ['Endereço', 'Telefone'])
   
   // Flexible fields to handle potential column naming differences in Supabase
   cliente?: string;

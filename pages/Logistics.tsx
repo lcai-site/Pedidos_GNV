@@ -46,7 +46,6 @@ export const Logistics: React.FC = () => {
   const [saving, setSaving] = useState(false);
 
   // --- REGRAS DO SCRIPT (V25) ---
-  // Replicando: function calcularJanelaDePVSegura(dataPedido)
   const getSafeShipDate = (orderDateStr: string): Date => {
     const d = new Date(orderDateStr);
     const dayOfWeek = getDay(d); // 0 = Domingo, ... 4 = Quinta, 5 = Sexta
@@ -106,7 +105,7 @@ export const Logistics: React.FC = () => {
     email: ['email_cliente', 'email', 'cliente_email', 'contact_email', 'buyer_email', 'user_email', 'mail'],
     zip: ['cep', 'zip', 'zipcode', 'zip_code', 'postal_code'],
     street: ['rua', 'logradouro', 'street', 'street_name', 'address_line_1', 'endereco_rua', 'thoroughfare'],
-    number: ['numero', 'number', 'street_number', 'num', 'endereco_numero', 'house_number'],
+    number: ['numero', 'number', 'street_number', 'num', 'endereco_numero', 'house_number', 'nr', 'n'],
     comp: ['complemento', 'comp', 'complement', 'address_line_2', 'endereco_complemento', 'extra'],
     neighborhood: ['bairro', 'neighborhood', 'district', 'endereco_bairro', 'suburb'],
     city: ['cidade', 'city', 'municipio', 'endereco_cidade', 'town'],
@@ -239,61 +238,191 @@ export const Logistics: React.FC = () => {
     setIsEditModalOpen(true);
   };
 
-  const resolveUpdateKey = (order: any, candidates: string[], defaultKey: string) => {
-     if (!order) return defaultKey;
-     for (const key of candidates) {
-         if (Object.prototype.hasOwnProperty.call(order, key)) return key;
-     }
-     for (const key of candidates) {
-        if (order[key] !== undefined) return key;
-     }
-     return defaultKey;
+  // Helper function to deep patch address in nested objects
+  const patchAddressInObject = (obj: any, form: any) => {
+    if (!obj || typeof obj !== 'object') return obj;
+    const newObj = Array.isArray(obj) ? [...obj] : { ...obj };
+    
+    // 1. Atualizar sub-objeto 'address' ou 'endereco' se existir
+    // Ex: customer.address
+    if (newObj.address && typeof newObj.address === 'object') {
+        newObj.address = {
+            ...newObj.address,
+            street: form.logradouro,
+            street_number: form.numero,
+            number: form.numero,
+            zip_code: form.cep,
+            zip: form.cep,
+            neighborhood: form.bairro,
+            city: form.cidade,
+            state: form.estado,
+            complement: form.complemento
+        };
+    }
+    
+    if (newObj.endereco && typeof newObj.endereco === 'object') {
+        newObj.endereco = {
+             ...newObj.endereco,
+             logradouro: form.logradouro,
+             rua: form.logradouro,
+             numero: form.numero,
+             bairro: form.bairro,
+             cidade: form.cidade,
+             estado: form.estado,
+             cep: form.cep,
+             complemento: form.complemento
+        };
+    }
+
+    // 2. Atualizar chaves planas no próprio objeto se ele parecer ser um objeto de endereço
+    const objectKeys = Object.keys(newObj);
+    const hasFlatAddressLikeKeys = objectKeys.some(k => 
+        ['rua','logradouro','street','cep','zip','city','cidade'].includes(k.toLowerCase())
+    );
+    
+    if (hasFlatAddressLikeKeys) {
+        if (newObj.rua !== undefined) newObj.rua = form.logradouro;
+        if (newObj.logradouro !== undefined) newObj.logradouro = form.logradouro;
+        if (newObj.street !== undefined) newObj.street = form.logradouro;
+        
+        if (newObj.numero !== undefined) newObj.numero = form.numero;
+        if (newObj.number !== undefined) newObj.number = form.numero;
+        
+        if (newObj.bairro !== undefined) newObj.bairro = form.bairro;
+        if (newObj.neighborhood !== undefined) newObj.neighborhood = form.bairro;
+        
+        if (newObj.cidade !== undefined) newObj.cidade = form.cidade;
+        if (newObj.city !== undefined) newObj.city = form.cidade;
+        
+        if (newObj.estado !== undefined) newObj.estado = form.estado;
+        if (newObj.state !== undefined) newObj.state = form.estado;
+        if (newObj.uf !== undefined) newObj.uf = form.estado;
+        
+        if (newObj.cep !== undefined) newObj.cep = form.cep;
+        if (newObj.zip !== undefined) newObj.zip = form.cep;
+
+        if (newObj.complemento !== undefined) newObj.complemento = form.complemento;
+        if (newObj.complement !== undefined) newObj.complement = form.complemento;
+    }
+    
+    return newObj;
   };
 
   const handleEditSave = async () => {
     if (!editingOrder) return;
     setSaving(true);
+    
     try {
+      // 1. Preparar Dados Universais
       const enderecoCompleto = `${editForm.logradouro}, ${editForm.numero} ${editForm.complemento ? '- ' + editForm.complemento : ''} - ${editForm.bairro}, ${editForm.cidade} - ${editForm.estado}, ${editForm.cep}`.replace(/, ,/g, ',');
+      const jsonColumns = ['dados_entrega', 'endereco_json', 'shipping', 'customer', 'metadata'];
 
-      const phoneKey = resolveUpdateKey(editingOrder, ['cliente_telefone', 'telefone', 'phone', 'celular'], 'telefone');
-      const emailKey = resolveUpdateKey(editingOrder, ['email_cliente', 'cliente_email', 'email', 'contact_email'], 'email');
-      const nameKey = resolveUpdateKey(editingOrder, ['nome_cliente', 'cliente_nome', 'nome'], 'nome_cliente');
-      const cpfKey = resolveUpdateKey(editingOrder, ['cliente_cpf', 'cpf'], 'cpf');
+      // --- PASSO A: ATUALIZAR TABELA 'PEDIDOS' (Fonte da Verdade) ---
+      // Primeiro, buscamos o registro original na tabela 'pedidos' para ter certeza que estamos editando a estrutura correta
+      const { data: originalSalesData, error: fetchError } = await supabase
+        .from('pedidos')
+        .select('*')
+        .eq('id', editingOrder.id)
+        .single();
 
-      const updates: any = {};
-      updates[nameKey] = editForm.nome;
-      updates[cpfKey] = editForm.cpf;
-      updates[phoneKey] = editForm.telefone;
-      updates[emailKey] = editForm.email;
-      updates['cep'] = editForm.cep;
-      updates['rua'] = editForm.logradouro;
-      updates['numero'] = editForm.numero;
-      updates['complemento'] = editForm.complemento;
-      updates['bairro'] = editForm.bairro;
-      updates['cidade'] = editForm.cidade;
-      updates['estado'] = editForm.estado;
-      updates['endereco_completo'] = enderecoCompleto;
-      
-      // Novos campos
-      updates['observacao'] = editForm.observacao;
-      updates['foi_editado'] = true;
+      if (!fetchError && originalSalesData) {
+         const salesUpdates: any = {};
+         
+         // Helper local para 'pedidos'
+         const addIfKeyExistsInSales = (keyName: string, value: any) => {
+            if (Object.prototype.hasOwnProperty.call(originalSalesData, keyName)) {
+                salesUpdates[keyName] = value;
+            }
+         };
 
-      const { error } = await supabase.from('pedidos_unificados').update(updates).eq('id', editingOrder.id);
+         // Mapeamento para 'pedidos'
+         keys.nome.forEach(k => addIfKeyExistsInSales(k, editForm.nome));
+         keys.email.forEach(k => addIfKeyExistsInSales(k, editForm.email));
+         keys.phone.forEach(k => addIfKeyExistsInSales(k, editForm.telefone));
+         keys.cpf.forEach(k => addIfKeyExistsInSales(k, editForm.cpf));
+         
+         // Endereço plano em 'pedidos'
+         keys.zip.forEach(k => addIfKeyExistsInSales(k, editForm.cep));
+         keys.street.forEach(k => addIfKeyExistsInSales(k, editForm.logradouro));
+         keys.comp.forEach(k => addIfKeyExistsInSales(k, editForm.complemento));
+         keys.neighborhood.forEach(k => addIfKeyExistsInSales(k, editForm.bairro));
+         keys.city.forEach(k => addIfKeyExistsInSales(k, editForm.cidade));
+         keys.state.forEach(k => addIfKeyExistsInSales(k, editForm.estado));
+         keys.number.forEach(k => {
+             if (Object.prototype.hasOwnProperty.call(originalSalesData, k)) {
+                 const isPureNumber = /^\d+$/.test(editForm.numero);
+                 salesUpdates[k] = isPureNumber ? parseInt(editForm.numero) : editForm.numero;
+             }
+         });
 
-      if (error) {
-         const simpleUpdates: any = { endereco_completo: enderecoCompleto };
-         simpleUpdates['telefone'] = editForm.telefone; 
-         simpleUpdates['email'] = editForm.email;
-         simpleUpdates['observacao'] = editForm.observacao;
-         simpleUpdates['foi_editado'] = true;
-         await supabase.from('pedidos_unificados').update(simpleUpdates).eq('id', editingOrder.id);
+         // Deep Patch JSONs em 'pedidos'
+         jsonColumns.forEach(jsonCol => {
+            if (originalSalesData[jsonCol] && typeof originalSalesData[jsonCol] === 'object') {
+                salesUpdates[jsonCol] = patchAddressInObject(originalSalesData[jsonCol], editForm);
+            }
+         });
+
+         console.log("Atualizando PEDIDOS (Source):", salesUpdates);
+         
+         // Executa update na tabela fonte
+         if (Object.keys(salesUpdates).length > 0) {
+            await supabase.from('pedidos').update(salesUpdates).eq('id', editingOrder.id);
+         }
       }
-      setAllOrders(allOrders.map(o => o.id === editingOrder.id ? { ...o, ...updates, observacao: editForm.observacao, foi_editado: true } : o));
+
+      // --- PASSO B: ATUALIZAR TABELA 'PEDIDOS_UNIFICADOS' (View/Cache) ---
+      // Mesmo que seja uma view materializada, tentamos atualizar campos operacionais e o display string
+      // para garantir que a UI reflita a mudança agora.
+      
+      const unifiedUpdates: any = {
+        observacao: editForm.observacao,
+        foi_editado: true,
+        // Forçamos o endereço completo para exibição na tabela, independente da estrutura interna
+        endereco_completo: enderecoCompleto,
+        // Também salvamos campos planos caso existam na tabela unificada (para redundância)
+        telefone: editForm.telefone,
+        email: editForm.email
+      };
+      
+      // Update redundante dos JSONs na unificada caso ela seja uma tabela real desconectada
+      jsonColumns.forEach(jsonCol => {
+        if (editingOrder[jsonCol] && typeof editingOrder[jsonCol] === 'object') {
+            unifiedUpdates[jsonCol] = patchAddressInObject(editingOrder[jsonCol], editForm);
+        }
+      });
+
+      console.log("Atualizando PEDIDOS_UNIFICADOS (Cache):", unifiedUpdates);
+
+      const { error: unifiedError } = await supabase
+        .from('pedidos_unificados')
+        .update(unifiedUpdates)
+        .eq('id', editingOrder.id);
+
+      // Ignoramos erro na unificada se for 'view not updatable', pois já salvamos na 'pedidos'
+      if (unifiedError) {
+          console.warn("Aviso ao atualizar unificados (pode ser view):", unifiedError.message);
+      }
+
+      // --- PASSO C: ATUALIZAR UI ---
+      setAllOrders(prev => prev.map(o => o.id === editingOrder.id ? { 
+          ...o, 
+          ...unifiedUpdates,
+          // Garante campos visuais
+          nome_cliente: editForm.nome,
+          cliente: editForm.nome, // fallback
+          telefone: editForm.telefone,
+          email: editForm.email
+      } : o));
+      
+      // FORÇA O FECHAMENTO DO MODAL
       setIsEditModalOpen(false);
-    } catch (error) {
-      console.error("Error updating order:", error);
-      alert("Erro ao atualizar dados.");
+      setEditingOrder(null); // Limpa seleção
+
+    } catch (error: any) {
+      console.error("Erro CRÍTICO ao salvar:", error);
+      alert(`Erro ao salvar no banco de dados:\n${error.message || JSON.stringify(error)}`);
+      // Mesmo com erro, se for algo parcial, fechamos para não travar o usuário
+      setIsEditModalOpen(false); 
     } finally {
       setSaving(false);
     }
@@ -315,11 +444,15 @@ export const Logistics: React.FC = () => {
   };
 
   const getDisplayAddress = (order: PedidoUnificado) => {
+     // Prioridade: endereco_completo (nossa string formatada salva) -> campos planos -> deep search
+     if (order.endereco_completo) return order.endereco_completo;
+
      const street = getDeepVal(order, keys.street);
      const num = getDeepVal(order, keys.number);
      const city = getDeepVal(order, keys.city);
      const uf = getDeepVal(order, keys.state);
      if (street) return `${street}, ${num} - ${city}/${uf}`;
+     
      return getDeepVal(order, keys.fullAddress) || 'Endereço n/d';
   }
 
@@ -373,6 +506,47 @@ export const Logistics: React.FC = () => {
   useEffect(() => {
     setPage(1);
   }, [searchTerm, pageSize, activeTab, shippingRefDate]);
+
+  // Renderiza Badges de Mudança
+  const renderChangeBadges = (order: PedidoUnificado) => {
+    if (!order.foi_editado) return null;
+    
+    // Se temos a lista detalhada
+    if (order.campos_alterados && order.campos_alterados.length > 0) {
+        return (
+            <div className="flex flex-wrap gap-1 mt-1">
+                {order.campos_alterados.map((campo) => {
+                    let badgeColor = "bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700";
+                    let Icon = PenTool;
+
+                    if (campo === 'Endereço') {
+                        badgeColor = "bg-purple-100 text-purple-700 border-purple-200 dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-800";
+                        Icon = MapPin;
+                    } else if (campo === 'Contato') {
+                        badgeColor = "bg-teal-100 text-teal-700 border-teal-200 dark:bg-teal-900/30 dark:text-teal-300 dark:border-teal-800";
+                        Icon = Phone;
+                    } else if (campo === 'Nome' || campo === 'CPF') {
+                        badgeColor = "bg-indigo-100 text-indigo-700 border-indigo-200 dark:bg-indigo-900/30 dark:text-indigo-300 dark:border-indigo-800";
+                        Icon = User;
+                    }
+
+                    return (
+                        <div key={campo} className={`flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded border ${badgeColor}`}>
+                            <Icon className="w-2.5 h-2.5" /> {campo}
+                        </div>
+                    );
+                })}
+            </div>
+        );
+    }
+
+    // Fallback genérico se a coluna campos_alterados não estiver populada ainda
+    return (
+        <div className="flex items-center gap-1 mt-1 text-[10px] text-blue-500 font-medium bg-blue-50 dark:bg-blue-900/20 px-1.5 py-0.5 rounded w-fit border border-blue-200 dark:border-blue-800">
+            <PenTool className="w-3 h-3" /> Editado
+        </div>
+    );
+  };
 
   return (
     <div className="space-y-6">
@@ -500,11 +674,7 @@ export const Logistics: React.FC = () => {
                       <tr key={order.id} className={`hover:bg-slate-100 dark:hover:bg-slate-800/50 transition-colors ${isRisk ? 'bg-red-50 dark:bg-red-900/10' : ''}`}>
                         <td className="px-6 py-4 text-slate-500 whitespace-nowrap">
                             {format(new Date(order.created_at), 'dd/MM/yy HH:mm')}
-                            {order.foi_editado && (
-                                <div className="flex items-center gap-1 mt-1 text-[10px] text-blue-500 font-medium bg-blue-50 dark:bg-blue-900/20 px-1.5 py-0.5 rounded w-fit border border-blue-200 dark:border-blue-800">
-                                    <PenTool className="w-3 h-3" /> Editado
-                                </div>
-                            )}
+                            {renderChangeBadges(order)}
                         </td>
                         <td className="px-6 py-4">
                           <div className="flex flex-col">
