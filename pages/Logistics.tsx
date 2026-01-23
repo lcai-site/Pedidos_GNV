@@ -35,28 +35,39 @@ export const Logistics: React.FC = () => {
 
   // --- Helpers de Leitura de Dados (Deep Search) ---
   
-  // Busca valor em profundidade (Root -> Metadata -> Customer -> Address)
+  // Busca valor em profundidade com suporte a estruturas aninhadas complexas (Ticto/Hotmart)
   const getDeepVal = (obj: any, keys: string[]): string => {
     if (!obj) return '';
 
-    // 1. Nível Raiz
+    // 1. Nível Raiz (Root)
     for (const key of keys) {
-      if (obj[key] !== undefined && obj[key] !== null && String(obj[key]).trim() !== '') return String(obj[key]);
+      if (obj[key] !== undefined && obj[key] !== null && typeof obj[key] !== 'object' && String(obj[key]).trim() !== '') {
+        return String(obj[key]);
+      }
     }
 
-    // 2. Objetos Aninhados Comuns (JSONB)
-    const nestedObjs = ['metadata', 'customer', 'shipping', 'address', 'dados_entrega', 'endereco_json'];
-    for (const nest of nestedObjs) {
-      if (obj[nest] && typeof obj[nest] === 'object') {
-        // Busca direta no objeto aninhado
+    // 2. Lista de Objetos para verificar (suporte a metadata.customer, etc)
+    const targets = [
+      obj.metadata,
+      obj.customer,
+      obj.shipping,
+      obj.address,
+      obj.dados_entrega,
+      obj.endereco_json,
+      obj.payer,
+      // Estruturas aninhadas comuns em webhooks
+      obj.metadata?.customer,
+      obj.metadata?.buyer,
+      obj.metadata?.address,
+      obj.customer?.address
+    ];
+
+    for (const target of targets) {
+      if (target && typeof target === 'object') {
         for (const key of keys) {
-           if (obj[nest][key] !== undefined && obj[nest][key] !== null && String(obj[nest][key]).trim() !== '') return String(obj[nest][key]);
-        }
-        // Busca em sub-nível de endereço (ex: metadata.address.street)
-        if (obj[nest].address && typeof obj[nest].address === 'object') {
-             for (const key of keys) {
-               if (obj[nest].address[key] !== undefined && obj[nest].address[key] !== null && String(obj[nest].address[key]).trim() !== '') return String(obj[nest].address[key]);
-            }
+           if (target[key] !== undefined && target[key] !== null && typeof target[key] !== 'object' && String(target[key]).trim() !== '') {
+             return String(target[key]);
+           }
         }
       }
     }
@@ -69,7 +80,8 @@ export const Logistics: React.FC = () => {
     nome: ['nome_cliente', 'cliente_nome', 'cliente', 'nome', 'full_name', 'name', 'buyer_name'],
     cpf: ['cpf', 'cliente_cpf', 'doc', 'documento', 'cpf_cliente', 'tax_id', 'vat_number'],
     phone: ['telefone', 'cliente_telefone', 'phone', 'celular', 'whatsapp', 'phone_number', 'mobile'],
-    email: ['email', 'cliente_email', 'contact_email', 'buyer_email', 'user_email'],
+    // Lista expandida para email
+    email: ['email_cliente', 'email', 'cliente_email', 'contact_email', 'buyer_email', 'user_email', 'mail'],
     zip: ['cep', 'zip', 'zipcode', 'zip_code', 'postal_code'],
     street: ['rua', 'logradouro', 'street', 'street_name', 'address_line_1', 'endereco_rua', 'thoroughfare'],
     number: ['numero', 'number', 'street_number', 'num', 'endereco_numero', 'house_number'],
@@ -204,7 +216,7 @@ export const Logistics: React.FC = () => {
       nome: getDeepVal(order, keys.nome),
       cpf: getDeepVal(order, keys.cpf),
       telefone: getDeepVal(order, keys.phone),
-      email: getDeepVal(order, keys.email), // Carrega email
+      email: getDeepVal(order, keys.email), // Carrega email com a nova lógica
       cep,
       logradouro,
       numero,
@@ -241,7 +253,8 @@ export const Logistics: React.FC = () => {
 
       // Descobre os nomes corretos das colunas para este registro específico
       const phoneKey = resolveUpdateKey(editingOrder, ['cliente_telefone', 'telefone', 'phone', 'celular'], 'telefone');
-      const emailKey = resolveUpdateKey(editingOrder, ['cliente_email', 'email', 'contact_email'], 'email');
+      // Adicionado 'email_cliente' à lista de verificação
+      const emailKey = resolveUpdateKey(editingOrder, ['email_cliente', 'cliente_email', 'email', 'contact_email'], 'email');
       const nameKey = resolveUpdateKey(editingOrder, ['nome_cliente', 'cliente_nome', 'nome'], 'nome_cliente');
       const cpfKey = resolveUpdateKey(editingOrder, ['cliente_cpf', 'cpf'], 'cpf');
 
@@ -254,8 +267,7 @@ export const Logistics: React.FC = () => {
       updates[phoneKey] = editForm.telefone;
       updates[emailKey] = editForm.email;
 
-      // Dados de Endereço (tenta chaves padrão, o Supabase ignora se não existir ou dá erro? 
-      // Idealmente deveríamos checar também, mas endereço é mais padronizado na sua estrutura)
+      // Dados de Endereço (tenta chaves padrão)
       updates['cep'] = editForm.cep;
       updates['rua'] = editForm.logradouro;
       updates['numero'] = editForm.numero;
@@ -266,7 +278,6 @@ export const Logistics: React.FC = () => {
       
       // Endereço completo concatenado
       updates['endereco_completo'] = enderecoCompleto;
-      // updates['endereco'] = enderecoCompleto; // Cuidado ao duplicar updates, pode confundir triggers
 
       console.log("Saving updates with keys:", { phoneKey, emailKey, nameKey, updates });
 
