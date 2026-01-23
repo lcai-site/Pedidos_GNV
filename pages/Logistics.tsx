@@ -4,8 +4,9 @@ import { PedidoUnificado } from '../types';
 import { StatusBadge } from '../components/ui/StatusBadge';
 import { TableSkeleton } from '../components/ui/Skeleton';
 import { Modal } from '../components/ui/Modal';
-import { Search, Printer, Truck, AlertTriangle, Save, Pencil, User, MapPin, Phone, FileText, CheckCircle2, Mail, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, Printer, Truck, AlertTriangle, Save, Pencil, User, MapPin, Phone, FileText, CheckCircle2, Mail, ChevronLeft, ChevronRight, Calendar, Clock, Lock } from 'lucide-react';
 import { useDateFilter } from '../context/DateFilterContext';
+import { addDays, isAfter, isBefore, startOfDay, format, parseISO, getDay } from 'date-fns';
 
 export const Logistics: React.FC = () => {
   const { startDate, endDate } = useDateFilter();
@@ -14,6 +15,10 @@ export const Logistics: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [trackingUpdates, setTrackingUpdates] = useState<{ [key: string]: string }>({});
   
+  // Logistics Logic State
+  const [shippingRefDate, setShippingRefDate] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [activeTab, setActiveTab] = useState<'ready' | 'waiting'>('ready');
+
   // Client-Side Pagination State
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
@@ -38,6 +43,24 @@ export const Logistics: React.FC = () => {
     syncTicto: false
   });
   const [saving, setSaving] = useState(false);
+
+  // --- REGRAS DO SCRIPT (V25) ---
+  // Replicando: function calcularJanelaDePVSegura(dataPedido)
+  const getSafeShipDate = (orderDateStr: string): Date => {
+    const d = new Date(orderDateStr);
+    const dayOfWeek = getDay(d); // 0 = Domingo, ... 4 = Quinta, 5 = Sexta
+
+    // Quinta (4) -> +4 dias (Segunda encerra janela)
+    if (dayOfWeek === 4) {
+      return addDays(d, 4);
+    }
+    // Sexta (5) -> +4 dias (Terça encerra janela)
+    if (dayOfWeek === 5) {
+      return addDays(d, 4);
+    }
+    // Dias normais -> +2 dias
+    return addDays(d, 2);
+  };
 
   // --- Helpers de Leitura de Dados (Deep Search) ---
   const getDeepVal = (obj: any, keys: string[]): string => {
@@ -126,7 +149,6 @@ export const Logistics: React.FC = () => {
     setLoading(true);
     setPage(1); // Reset pagination on new fetch
     try {
-      // Increased limit to 5000 to ensure we get most data for client-side filtering
       const { data, error } = await supabase
         .from('pedidos_unificados')
         .select('*')
@@ -293,8 +315,10 @@ export const Logistics: React.FC = () => {
      return getDeepVal(order, keys.fullAddress) || 'Endereço n/d';
   }
 
-  // --- Filtering & Pagination Logic ---
-  const filteredOrders = allOrders.filter(order => {
+  // --- Filtering & Rules Logic ---
+  
+  // 1. Filtragem Geral (Busca)
+  const searchFilteredOrders = allOrders.filter(order => {
     if (!order) return false;
     const term = searchTerm.toLowerCase();
     const pkgDesc = String(order.descricao_pacote || '').toLowerCase();
@@ -306,66 +330,141 @@ export const Logistics: React.FC = () => {
     return pkgDesc.includes(term) || name.includes(term) || email.includes(term) || groupCode.includes(term) || fullAddr.includes(term);
   });
 
-  const totalPages = Math.ceil(filteredOrders.length / pageSize);
-  const displayedOrders = filteredOrders.slice((page - 1) * pageSize, page * pageSize);
+  // 2. Aplicação da Regra de Janela de Pós-Venda
+  const categorizedOrders = {
+    ready: [] as PedidoUnificado[],
+    waiting: [] as PedidoUnificado[]
+  };
+
+  const refDate = startOfDay(parseISO(shippingRefDate));
+
+  searchFilteredOrders.forEach(order => {
+    // Se já foi enviado, sempre aparece na lista de prontos (histórico)
+    if (order.status_envio === 'Enviado') {
+        categorizedOrders.ready.push(order);
+        return;
+    }
+
+    // Calcula quando esse pedido estaria "seguro" para envio
+    const safeDate = getSafeShipDate(order.created_at);
+    const safeDateStart = startOfDay(safeDate);
+
+    // Se a data de referência (hoje/selecionada) for MAIOR ou IGUAL a data segura, está pronto.
+    if (!isBefore(refDate, safeDateStart)) {
+        categorizedOrders.ready.push(order);
+    } else {
+        categorizedOrders.waiting.push(order);
+    }
+  });
+
+  const currentList = activeTab === 'ready' ? categorizedOrders.ready : categorizedOrders.waiting;
+
+  const totalPages = Math.ceil(currentList.length / pageSize);
+  const displayedOrders = currentList.slice((page - 1) * pageSize, page * pageSize);
 
   useEffect(() => {
     setPage(1);
-  }, [searchTerm, pageSize]);
+  }, [searchTerm, pageSize, activeTab, shippingRefDate]);
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      {/* Top Header & Actions */}
+      <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6">
         <div>
           <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Logística de Envios</h2>
-          <p className="text-slate-500 dark:text-slate-400">Gerencie etiquetas e códigos de rastreio.</p>
+          <p className="text-slate-500 dark:text-slate-400">Gestão inteligente com janelas de Pós-Venda.</p>
         </div>
-        <div className="flex gap-2">
+        
+        <div className="flex flex-wrap items-center gap-3">
+            {/* Date Selector for Shipping Reference */}
+            <div className="flex items-center gap-2 bg-surface border border-border px-3 py-2 rounded-lg shadow-sm">
+                <Calendar className="w-4 h-4 text-slate-500" />
+                <span className="text-xs font-semibold text-slate-500 uppercase">Data Envio:</span>
+                <input 
+                    type="date" 
+                    value={shippingRefDate}
+                    onChange={(e) => setShippingRefDate(e.target.value)}
+                    className="bg-transparent text-sm font-medium text-slate-900 dark:text-slate-200 outline-none"
+                />
+            </div>
+
             <button className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg flex items-center gap-2 text-sm font-medium transition-colors shadow-sm">
               <Printer className="w-4 h-4" />
-              Gerar Etiquetas
+              Gerar Etiquetas ({categorizedOrders.ready.filter(o => o.status_envio !== 'Enviado').length})
             </button>
         </div>
       </div>
 
-      <div className="bg-surface border border-border rounded-xl overflow-hidden shadow-sm">
-        <div className="p-4 border-b border-border bg-slate-50 dark:bg-slate-900/50 flex flex-col sm:flex-row gap-4 justify-between items-center">
-          <div className="relative w-full sm:w-96">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
-            <input 
-              type="text" 
-              placeholder="Buscar por cliente, email, endereço, pacote ou SKU..." 
-              className="w-full bg-white dark:bg-slate-950 border border-border rounded-lg pl-10 pr-4 py-2 text-sm text-slate-900 dark:text-slate-200 focus:outline-none focus:border-blue-500 transition-colors"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
+      <div className="bg-surface border border-border rounded-xl overflow-hidden shadow-sm flex flex-col min-h-[600px]">
+        
+        {/* Tabs & Filters */}
+        <div className="p-4 border-b border-border bg-slate-50 dark:bg-slate-900/50 flex flex-col lg:flex-row gap-4 justify-between items-center">
+          
+          {/* Tabs */}
+          <div className="flex p-1 bg-slate-200 dark:bg-slate-800 rounded-lg self-start lg:self-center">
+             <button
+               onClick={() => setActiveTab('ready')}
+               className={`px-4 py-2 text-sm font-medium rounded-md transition-all flex items-center gap-2 ${
+                 activeTab === 'ready' 
+                   ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm' 
+                   : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+               }`}
+             >
+                <CheckCircle2 className="w-4 h-4" />
+                Prontos para Envio
+                <span className="ml-1 bg-slate-100 dark:bg-slate-900 px-2 py-0.5 rounded-full text-xs text-slate-600 dark:text-slate-400">
+                    {categorizedOrders.ready.length}
+                </span>
+             </button>
+             <button
+               onClick={() => setActiveTab('waiting')}
+               className={`px-4 py-2 text-sm font-medium rounded-md transition-all flex items-center gap-2 ${
+                 activeTab === 'waiting' 
+                   ? 'bg-white dark:bg-slate-700 text-orange-600 dark:text-orange-400 shadow-sm' 
+                   : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+               }`}
+             >
+                <Clock className="w-4 h-4" />
+                Aguardando Janela PV
+                <span className="ml-1 bg-slate-100 dark:bg-slate-900 px-2 py-0.5 rounded-full text-xs text-slate-600 dark:text-slate-400">
+                    {categorizedOrders.waiting.length}
+                </span>
+             </button>
           </div>
 
-           <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
-            <span>Itens por página:</span>
-            <select 
-              value={pageSize} 
-              onChange={(e) => setPageSize(Number(e.target.value))}
-              className="bg-white dark:bg-slate-950 border border-border rounded px-2 py-1.5 text-slate-900 dark:text-slate-200 focus:outline-none focus:border-blue-500"
-            >
-              <option value={25}>25</option>
-              <option value={50}>50</option>
-              <option value={100}>100</option>
-              <option value={500}>500</option>
-            </select>
+          <div className="flex flex-col sm:flex-row gap-4 w-full lg:w-auto">
+            <div className="relative w-full sm:w-80">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
+                <input 
+                type="text" 
+                placeholder="Buscar..." 
+                className="w-full bg-white dark:bg-slate-950 border border-border rounded-lg pl-10 pr-4 py-2 text-sm text-slate-900 dark:text-slate-200 focus:outline-none focus:border-blue-500 transition-colors"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                />
+            </div>
           </div>
         </div>
 
-        <div className="overflow-x-auto">
+        {/* Warning Banner for Waiting Tab */}
+        {activeTab === 'waiting' && (
+            <div className="bg-orange-500/10 border-b border-orange-500/20 p-3 text-center text-xs text-orange-600 dark:text-orange-400 flex items-center justify-center gap-2">
+                <Lock className="w-3.5 h-3.5" />
+                Estes pedidos ainda estão dentro da janela de unificação de Pós-Venda. Só envie se for urgente.
+            </div>
+        )}
+
+        <div className="overflow-x-auto flex-1">
           {loading ? (
             <div className="p-4"><TableSkeleton /></div>
           ) : (
             <table className="w-full text-sm text-left">
               <thead className="text-xs text-slate-500 dark:text-slate-400 uppercase bg-slate-50 dark:bg-slate-900/80 border-b border-border">
                 <tr>
+                  <th className="px-6 py-4 font-medium">Data Pedido</th>
                   <th className="px-6 py-4 font-medium">Pacote / Produtos</th>
                   <th className="px-6 py-4 font-medium">Cliente</th>
-                  <th className="px-6 py-4 font-medium">Status</th>
+                  <th className="px-6 py-4 font-medium">Liberado em</th>
                   <th className="px-6 py-4 font-medium">Rastreio</th>
                   <th className="px-6 py-4 font-medium text-right">Ações</th>
                 </tr>
@@ -373,8 +472,8 @@ export const Logistics: React.FC = () => {
               <tbody className="divide-y divide-border">
                 {displayedOrders.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="px-6 py-12 text-center text-slate-500">
-                      Nenhum pedido encontrado no período selecionado.
+                    <td colSpan={6} className="px-6 py-12 text-center text-slate-500">
+                      Nenhum pedido encontrado nesta categoria.
                     </td>
                   </tr>
                 ) : (
@@ -385,9 +484,15 @@ export const Logistics: React.FC = () => {
                     const clientEmail = getDeepVal(order, keys.email);
                     const displayCodes = formatGroupCodes(order.codigos_agrupados);
                     const addressDisplay = getDisplayAddress(order);
+                    
+                    const safeDate = getSafeShipDate(order.created_at);
+                    const isLate = activeTab === 'waiting';
 
                     return (
                       <tr key={order.id} className={`hover:bg-slate-100 dark:hover:bg-slate-800/50 transition-colors ${isRisk ? 'bg-red-50 dark:bg-red-900/10' : ''}`}>
+                        <td className="px-6 py-4 text-slate-500 whitespace-nowrap">
+                            {format(new Date(order.created_at), 'dd/MM/yy HH:mm')}
+                        </td>
                         <td className="px-6 py-4">
                           <div className="flex flex-col">
                             <span className="font-medium text-slate-900 dark:text-slate-200">{order.descricao_pacote || 'Pacote sem descrição'}</span>
@@ -396,7 +501,7 @@ export const Logistics: React.FC = () => {
                             </span>
                             {isRisk && (
                                 <span className="flex items-center gap-1 text-red-500 dark:text-red-400 text-xs mt-1 font-bold">
-                                    <AlertTriangle className="w-3 h-3" /> Possível Fraude (Endereço divergente)
+                                    <AlertTriangle className="w-3 h-3" /> Risco Fraude
                                 </span>
                             )}
                           </div>
@@ -406,13 +511,15 @@ export const Logistics: React.FC = () => {
                             <span className="text-slate-700 dark:text-slate-300 font-medium">{clientName}</span>
                             <div className="flex flex-col mt-1">
                                 <span className="text-xs text-slate-500">{clientCpf}</span>
-                                {clientEmail && <span className="text-xs text-slate-500 truncate">{clientEmail}</span>}
                                 <span className="text-xs text-slate-500 dark:text-slate-400 truncate mt-1" title={addressDisplay}>{addressDisplay}</span>
                             </div>
                           </div>
                         </td>
                         <td className="px-6 py-4">
-                          <StatusBadge status={order.status_envio || 'Pendente'} />
+                            <div className={`flex items-center gap-1 text-xs font-medium px-2 py-1 rounded w-fit ${isLate ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300' : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300'}`}>
+                                {isLate ? <Lock className="w-3 h-3" /> : <CheckCircle2 className="w-3 h-3" />}
+                                {format(safeDate, 'dd/MM (EEE)')}
+                            </div>
                         </td>
                         <td className="px-6 py-4">
                           {order.codigo_rastreio ? (
@@ -424,8 +531,8 @@ export const Logistics: React.FC = () => {
                             <div className="flex gap-2">
                                 <input 
                                     type="text" 
-                                    placeholder="Cole o código aqui"
-                                    className="bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded px-3 py-1.5 text-slate-900 dark:text-slate-200 w-32 lg:w-40 focus:border-blue-500 focus:outline-none placeholder:text-slate-400"
+                                    placeholder="Rastreio..."
+                                    className="bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded px-2 py-1.5 text-xs text-slate-900 dark:text-slate-200 w-28 focus:border-blue-500 focus:outline-none"
                                     value={trackingUpdates[order.id] || ''}
                                     onChange={(e) => handleTrackingChange(order.id, e.target.value)}
                                 />
@@ -433,9 +540,9 @@ export const Logistics: React.FC = () => {
                                     <button 
                                         onClick={() => saveTracking(order.id)}
                                         className="text-green-600 dark:text-green-500 hover:text-green-500 p-1"
-                                        title="Salvar Rastreio"
+                                        title="Salvar"
                                     >
-                                        <Save className="w-5 h-5" />
+                                        <Save className="w-4 h-4" />
                                     </button>
                                 )}
                             </div>
@@ -448,12 +555,6 @@ export const Logistics: React.FC = () => {
                                 className="text-slate-500 hover:text-blue-500 dark:text-slate-400 dark:hover:text-blue-400 p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded transition-colors"
                              >
                                 <Pencil className="w-4 h-4" />
-                             </button>
-                             <button 
-                                className="text-blue-600 dark:text-blue-400 hover:text-blue-500 font-medium text-xs border border-blue-200 dark:border-blue-500/30 px-3 py-1.5 rounded hover:bg-blue-50 dark:hover:bg-blue-500/10 transition-colors whitespace-nowrap"
-                                onClick={() => alert('Simulação: Etiqueta ZPL/PDF gerada.')}
-                             >
-                                Etiqueta
                              </button>
                           </div>
                         </td>
@@ -469,7 +570,7 @@ export const Logistics: React.FC = () => {
         {/* Client-Side Pagination Footer */}
         <div className="px-4 py-3 border-t border-border bg-slate-50 dark:bg-slate-900/30 flex items-center justify-between">
             <span className="text-xs text-slate-500">
-            Mostrando {filteredOrders.length > 0 ? (page - 1) * pageSize + 1 : 0} até {Math.min(page * pageSize, filteredOrders.length)} de {filteredOrders.length} registros
+            Mostrando {currentList.length > 0 ? (page - 1) * pageSize + 1 : 0} até {Math.min(page * pageSize, currentList.length)} de {currentList.length}
             </span>
             
             <div className="flex items-center gap-1">
