@@ -14,6 +14,8 @@ export interface PedidoUnificado {
   status_envio: string; // 'Pendente', 'Enviado', etc.
   codigos_agrupados: string | string[]; // Pode vir como array do JSONB ou string
   codigo_rastreio: string | null;
+  observacao?: string; // Campo novo para notas internas
+  foi_editado?: boolean; // Campo novo para marcar edição manual
   
   // Flexible fields to handle potential column naming differences in Supabase
   cliente?: string;

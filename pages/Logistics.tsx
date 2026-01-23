@@ -4,7 +4,7 @@ import { PedidoUnificado } from '../types';
 import { StatusBadge } from '../components/ui/StatusBadge';
 import { TableSkeleton } from '../components/ui/Skeleton';
 import { Modal } from '../components/ui/Modal';
-import { Search, Printer, Truck, AlertTriangle, Save, Pencil, User, MapPin, Phone, FileText, CheckCircle2, Mail, ChevronLeft, ChevronRight, Calendar, Clock, Lock } from 'lucide-react';
+import { Search, Printer, Truck, AlertTriangle, Save, Pencil, User, MapPin, Phone, FileText, CheckCircle2, Mail, ChevronLeft, ChevronRight, Calendar, Clock, Lock, StickyNote, PenTool, AlertCircle } from 'lucide-react';
 import { useDateFilter } from '../context/DateFilterContext';
 import { addDays, isAfter, isBefore, startOfDay, format, parseISO, getDay } from 'date-fns';
 
@@ -40,6 +40,7 @@ export const Logistics: React.FC = () => {
     bairro: '',
     cidade: '',
     estado: '',
+    observacao: '',
     syncTicto: false
   });
   const [saving, setSaving] = useState(false);
@@ -231,6 +232,7 @@ export const Logistics: React.FC = () => {
       bairro,
       cidade,
       estado,
+      observacao: order.observacao || '',
       syncTicto: true 
     });
     
@@ -272,6 +274,10 @@ export const Logistics: React.FC = () => {
       updates['cidade'] = editForm.cidade;
       updates['estado'] = editForm.estado;
       updates['endereco_completo'] = enderecoCompleto;
+      
+      // Novos campos
+      updates['observacao'] = editForm.observacao;
+      updates['foi_editado'] = true;
 
       const { error } = await supabase.from('pedidos_unificados').update(updates).eq('id', editingOrder.id);
 
@@ -279,9 +285,11 @@ export const Logistics: React.FC = () => {
          const simpleUpdates: any = { endereco_completo: enderecoCompleto };
          simpleUpdates['telefone'] = editForm.telefone; 
          simpleUpdates['email'] = editForm.email;
+         simpleUpdates['observacao'] = editForm.observacao;
+         simpleUpdates['foi_editado'] = true;
          await supabase.from('pedidos_unificados').update(simpleUpdates).eq('id', editingOrder.id);
       }
-      setAllOrders(allOrders.map(o => o.id === editingOrder.id ? { ...o, ...updates } : o));
+      setAllOrders(allOrders.map(o => o.id === editingOrder.id ? { ...o, ...updates, observacao: editForm.observacao, foi_editado: true } : o));
       setIsEditModalOpen(false);
     } catch (error) {
       console.error("Error updating order:", error);
@@ -492,6 +500,11 @@ export const Logistics: React.FC = () => {
                       <tr key={order.id} className={`hover:bg-slate-100 dark:hover:bg-slate-800/50 transition-colors ${isRisk ? 'bg-red-50 dark:bg-red-900/10' : ''}`}>
                         <td className="px-6 py-4 text-slate-500 whitespace-nowrap">
                             {format(new Date(order.created_at), 'dd/MM/yy HH:mm')}
+                            {order.foi_editado && (
+                                <div className="flex items-center gap-1 mt-1 text-[10px] text-blue-500 font-medium bg-blue-50 dark:bg-blue-900/20 px-1.5 py-0.5 rounded w-fit border border-blue-200 dark:border-blue-800">
+                                    <PenTool className="w-3 h-3" /> Editado
+                                </div>
+                            )}
                         </td>
                         <td className="px-6 py-4">
                           <div className="flex flex-col">
@@ -513,6 +526,14 @@ export const Logistics: React.FC = () => {
                                 <span className="text-xs text-slate-500">{clientCpf}</span>
                                 <span className="text-xs text-slate-500 dark:text-slate-400 truncate mt-1" title={addressDisplay}>{addressDisplay}</span>
                             </div>
+                            {order.observacao && (
+                                <div className="mt-2 flex items-start gap-2 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 p-2 rounded-lg">
+                                    <StickyNote className="w-3.5 h-3.5 text-yellow-600 dark:text-yellow-500 mt-0.5 shrink-0" />
+                                    <span className="text-xs text-yellow-800 dark:text-yellow-200 leading-snug break-words">
+                                        {order.observacao}
+                                    </span>
+                                </div>
+                            )}
                           </div>
                         </td>
                         <td className="px-6 py-4">
@@ -631,6 +652,15 @@ export const Logistics: React.FC = () => {
               </div>
           </div>
           <div className="pt-4 border-t border-border mt-4">
+             <div className="space-y-2 mb-4">
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-2 uppercase tracking-wide"><StickyNote className="w-3 h-3" /> Observações Internas</label>
+                <textarea 
+                    value={editForm.observacao} 
+                    onChange={e => setEditForm({...editForm, observacao: e.target.value})} 
+                    className="w-full bg-yellow-50 dark:bg-yellow-900/10 border border-yellow-200 dark:border-yellow-900/30 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-slate-200 focus:border-yellow-500 outline-none min-h-[80px]"
+                    placeholder="Adicione observações importantes sobre este pedido aqui..."
+                />
+             </div>
              <div className="flex items-center gap-2 mb-4">
                 <input type="checkbox" id="syncTicto" checked={editForm.syncTicto} onChange={e => setEditForm({...editForm, syncTicto: e.target.checked})} className="rounded border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-blue-600 focus:ring-blue-500" />
                 <label htmlFor="syncTicto" className="text-sm text-slate-700 dark:text-slate-300 select-none cursor-pointer">Sincronizar alteração na Ticto (API)</label>
