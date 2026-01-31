@@ -1,71 +1,85 @@
 <!DOCTYPE html>
 <html lang="pt-BR" class="dark">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Gestão Pedidos GNV</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-      tailwind.config = {
-        darkMode: 'class',
-        theme: {
-          extend: {
-            colors: {
-              background: 'rgb(var(--background) / <alpha-value>)',
-              surface: 'rgb(var(--surface) / <alpha-value>)',
-              border: 'rgb(var(--border) / <alpha-value>)',
-              primary: '#3b82f6',
-            },
-            fontFamily: {
-              sans: ['Inter', 'sans-serif'],
-            }
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Gestão Pedidos GNV</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            background: 'rgb(var(--background) / <alpha-value>)',
+            surface: 'rgb(var(--surface) / <alpha-value>)',
+            border: 'rgb(var(--border) / <alpha-value>)',
+            primary: '#3b82f6',
+          },
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
           }
         }
       }
-    </script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <style>
-      :root {
-        /* Light Mode Variables (Default) */
-        --background: 248 250 252; /* slate-50 */
-        --surface: 255 255 255;     /* white */
-        --border: 226 232 240;      /* slate-200 */
-        --text-primary: 15 23 42;   /* slate-900 */
-        --text-secondary: 100 116 139; /* slate-500 */
-      }
+    }
+  </script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      /* Light Mode Variables (Default) */
+      --background: 248 250 252;
+      /* slate-50 */
+      --surface: 255 255 255;
+      /* white */
+      --border: 226 232 240;
+      /* slate-200 */
+      --text-primary: 15 23 42;
+      /* slate-900 */
+      --text-secondary: 100 116 139;
+      /* slate-500 */
+    }
 
-      .dark {
-        /* Dark Mode Variables */
-        --background: 2 6 23;    /* slate-950 */
-        --surface: 15 23 42;     /* slate-900 */
-        --border: 30 41 59;      /* slate-800 */
-        --text-primary: 248 250 252; /* slate-50 */
-        --text-secondary: 148 163 184; /* slate-400 */
-      }
+    .dark {
+      /* Dark Mode Variables */
+      --background: 2 6 23;
+      /* slate-950 */
+      --surface: 15 23 42;
+      /* slate-900 */
+      --border: 30 41 59;
+      /* slate-800 */
+      --text-primary: 248 250 252;
+      /* slate-50 */
+      --text-secondary: 148 163 184;
+      /* slate-400 */
+    }
 
-      body {
-        font-family: 'Inter', sans-serif;
-        background-color: rgb(var(--background));
-        color: rgb(var(--text-primary));
-        transition: background-color 0.3s, color 0.3s;
-      }
-      
-      /* Custom scrollbar */
-      ::-webkit-scrollbar {
-        width: 8px;
-        height: 8px;
-      }
-      ::-webkit-scrollbar-track {
-        background: rgb(var(--surface));
-      }
-      ::-webkit-scrollbar-thumb {
-        background: #334155;
-        border-radius: 4px;
-      }
-      ::-webkit-scrollbar-thumb:hover {
-        background: #475569;
-      }
-    </style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: rgb(var(--background));
+      color: rgb(var(--text-primary));
+      transition: background-color 0.3s, color 0.3s;
+    }
+
+    /* Custom scrollbar */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: rgb(var(--surface));
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: #334155;
+      border-radius: 4px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: #475569;
+    }
+  </style>
   <script type="importmap">
 {
   "imports": {
@@ -80,8 +94,10 @@
 }
 </script>
 </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="./index.tsx"></script>
-  </body>
+
+<body>
+  <div id="root"></div>
+  <script type="module" src="./index.tsx"></script>
+</body>
+
 </html>

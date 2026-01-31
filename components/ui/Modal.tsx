@@ -6,6 +6,7 @@ interface ModalProps {
   onClose: () => void;
   title: string;
   children: React.ReactNode;
+  size?: 'sm' | 'md' | 'lg' | 'xl'; // Tamanho opcional do modal
 }
 
 export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }) => {
@@ -15,7 +16,7 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
     };
-    
+
     if (isOpen) {
       document.addEventListener('keydown', handleEscape);
       document.body.style.overflow = 'hidden';
@@ -32,13 +33,13 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
       {/* Backdrop */}
-      <div 
-        className="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity" 
+      <div
+        className="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity"
         onClick={onClose}
       />
 
       {/* Modal Content */}
-      <div 
+      <div
         ref={modalRef}
         className="relative w-full max-w-lg transform rounded-xl bg-surface border border-border shadow-2xl transition-all flex flex-col max-h-[90vh]"
       >
@@ -51,7 +52,7 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }
             <X className="w-5 h-5" />
           </button>
         </div>
-        
+
         <div className="p-6 overflow-y-auto custom-scrollbar">
           {children}
         </div>

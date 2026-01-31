@@ -24,7 +24,7 @@ export const LoginPage: React.FC = () => {
           .select('id')
           .eq('id', session.user.id)
           .single();
-          
+
         if (profile) {
           navigate('/');
         } else {
@@ -48,25 +48,25 @@ export const LoginPage: React.FC = () => {
           email,
           password,
         });
-        
-        if (error) throw error;
-        
-        if (data.user) {
-           await new Promise(resolve => setTimeout(resolve, 1000));
-           
-           const { data: profile } = await supabase
-             .from('profiles')
-             .select('id')
-             .eq('id', data.user.id)
-             .single();
 
-           if (!profile) {
-             setSuccess("Conta criada. Faça login para concluir a configuração.");
-           } else {
-             setSuccess("Conta criada com sucesso! Você já pode entrar.");
-           }
-           setIsSignUp(false);
-           setPassword('');
+        if (error) throw error;
+
+        if (data.user) {
+          await new Promise(resolve => setTimeout(resolve, 1000));
+
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('id')
+            .eq('id', data.user.id)
+            .single();
+
+          if (!profile) {
+            setSuccess("Conta criada. Faça login para concluir a configuração.");
+          } else {
+            setSuccess("Conta criada com sucesso! Você já pode entrar.");
+          }
+          setIsSignUp(false);
+          setPassword('');
         }
 
       } else {
@@ -91,32 +91,43 @@ export const LoginPage: React.FC = () => {
           const { error: insertError } = await supabase
             .from('profiles')
             .insert([
-              { 
-                id: authData.user.id, 
-                email: authData.user.email, 
+              {
+                id: authData.user.id,
+                email: authData.user.email,
                 role: 'usuario',
                 created_at: new Date().toISOString()
               }
             ]);
 
           if (insertError) {
-             await supabase.auth.signOut();
-             throw new Error("Erro ao restaurar perfil.");
+            await supabase.auth.signOut();
+            throw new Error("Erro ao restaurar perfil.");
           }
           setSuccess("Perfil restaurado. Redirecionando...");
         }
 
-        navigate('/');
+        // Forçar reload completo para garantir atualização do estado de auth
+        setTimeout(() => {
+          window.location.href = '/#/';
+        }, 500);
       }
     } catch (err: any) {
+      // Log completo do erro para debug
+      console.error('Erro completo:', err);
+      console.error('Mensagem:', err.message);
+      console.error('Código:', err.code);
+      console.error('Status:', err.status);
+
       if (!isSignUp && !err.message.includes('restaurado')) await supabase.auth.signOut();
 
       if (err.message === 'Invalid login credentials') {
-         setError('Senha incorreta ou email não cadastrado.');
-      } else if (err.message.includes('already registered')) {
-         setError('E-mail já cadastrado. Faça Login.');
+        setError('Senha incorreta ou email não cadastrado.');
+      } else if (err.message.includes('already') || err.message.includes('registered') || err.code === '23505') {
+        setError('E-mail já cadastrado. Faça Login.');
+      } else if (err.message.includes('User already registered')) {
+        setError('E-mail já cadastrado. Faça Login.');
       } else {
-         setError(err.message || 'Erro inesperado.');
+        setError(err.message || 'Erro inesperado.');
       }
     } finally {
       setLoading(false);
@@ -134,22 +145,22 @@ export const LoginPage: React.FC = () => {
     <div className="min-h-screen bg-background flex items-center justify-center p-4 relative overflow-hidden transition-colors duration-300">
       {/* Background Decorativo */}
       <div className="absolute top-0 left-0 w-full h-1/2 bg-gradient-to-b from-blue-900/20 to-transparent pointer-events-none" />
-      
+
       <div className="w-full max-w-md bg-surface border border-border rounded-2xl shadow-2xl p-8 relative z-10 transition-all duration-300">
         <div className="mb-8 text-center">
           <div className="mx-auto mb-6 flex justify-center">
-             <img 
-               src={logoUrl} 
-               alt="Gestão Pedidos GNV" 
-               className="h-16 w-auto object-contain" 
-             />
+            <img
+              src={logoUrl}
+              alt="Gestão Pedidos GNV"
+              className="h-16 w-auto object-contain"
+            />
           </div>
           <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">
             {isSignUp ? 'Solicitar Acesso' : 'Acesso Restrito'}
           </h1>
           <p className="text-slate-500 dark:text-slate-400 text-sm mt-2">
-            {isSignUp 
-              ? 'Crie seu perfil de acesso ao sistema.' 
+            {isSignUp
+              ? 'Crie seu perfil de acesso ao sistema.'
               : 'Gestão Logística e Financeira GNV.'}
           </p>
         </div>
@@ -161,7 +172,7 @@ export const LoginPage: React.FC = () => {
               <span>{error}</span>
             </div>
           )}
-          
+
           {success && (
             <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-3 flex items-center gap-3 text-green-600 dark:text-green-400 text-sm animate-in fade-in slide-in-from-top-2">
               <CheckCircle className="w-4 h-4 shrink-0" />
@@ -203,11 +214,10 @@ export const LoginPage: React.FC = () => {
           <button
             type="submit"
             disabled={loading}
-            className={`w-full font-medium py-2.5 rounded-lg transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed mt-6 shadow-lg active:scale-[0.98] ${
-                isSignUp 
-                ? 'bg-emerald-600 hover:bg-emerald-500 shadow-emerald-900/20 text-white' 
-                : 'bg-blue-600 hover:bg-blue-500 shadow-blue-900/20 text-white'
-            }`}
+            className={`w-full font-medium py-2.5 rounded-lg transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed mt-6 shadow-lg active:scale-[0.98] ${isSignUp
+              ? 'bg-emerald-600 hover:bg-emerald-500 shadow-emerald-900/20 text-white'
+              : 'bg-blue-600 hover:bg-blue-500 shadow-blue-900/20 text-white'
+              }`}
           >
             {loading ? (
               <Loader2 className="w-5 h-5 animate-spin" />
@@ -224,25 +234,25 @@ export const LoginPage: React.FC = () => {
         </form>
 
         <div className="mt-8 pt-6 border-t border-border text-center space-y-4">
-          <button 
+          <button
             onClick={toggleMode}
             className="text-slate-500 hover:text-blue-500 text-xs transition-colors hover:underline flex items-center justify-center gap-2 mx-auto"
           >
             {isSignUp ? (
-                <>Já tem cadastro? <strong>Fazer Login</strong></>
+              <>Já tem cadastro? <strong>Fazer Login</strong></>
             ) : (
-                <>Não tem acesso? <strong>Criar nova conta</strong></>
+              <>Não tem acesso? <strong>Criar nova conta</strong></>
             )}
           </button>
-          
+
           {!isSignUp && (
-              <div className="flex items-center justify-center gap-2 text-[10px] text-slate-400 mt-4">
-                  <Database className="w-3 h-3" />
-                  <span>v2.0</span>
-                  <span className="text-slate-300 dark:text-slate-700">•</span>
-                  <Wrench className="w-3 h-3" />
-                  <span>GNV System</span>
-              </div>
+            <div className="flex items-center justify-center gap-2 text-[10px] text-slate-400 mt-4">
+              <Database className="w-3 h-3" />
+              <span>v2.0</span>
+              <span className="text-slate-300 dark:text-slate-700">•</span>
+              <Wrench className="w-3 h-3" />
+              <span>GNV System</span>
+            </div>
           )}
         </div>
       </div>

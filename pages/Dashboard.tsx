@@ -10,7 +10,7 @@ import { useDateFilter } from '../context/DateFilterContext';
 const parseCurrencyValue = (value: any): number => {
   if (value === null || value === undefined) return 0;
   if (typeof value === 'number') return value;
-  
+
   if (typeof value === 'string') {
     let clean = value.replace(/[^\d.,-]/g, '');
     const hasComma = clean.includes(',');
@@ -34,7 +34,7 @@ const parseCurrencyValue = (value: any): number => {
 // Helper: Tenta encontrar o método de pagamento
 const getPaymentMethod = (order: any): string => {
   if (!order) return '';
-  
+
   const directColumns = [
     order.metodo_pagamento,
     order.forma_pagamento,
@@ -86,14 +86,14 @@ const MetricCard = ({ title, value, count, subtext, icon: Icon, loading, color, 
         <Skeleton className="h-4 w-32 mt-2" />
       ) : (
         <div className="mt-2">
-           {subtext && <p className="text-sm text-slate-500">{subtext}</p>}
+          {subtext && <p className="text-sm text-slate-500">{subtext}</p>}
         </div>
       )}
     </div>
     {footer && !loading && (
-        <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-800 text-xs text-slate-400 space-y-1">
-            {footer}
-        </div>
+      <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-800 text-xs text-slate-400 space-y-1">
+        {footer}
+      </div>
     )}
   </div>
 );
@@ -127,17 +127,21 @@ export const Dashboard: React.FC = () => {
 
         console.log(`Fetching dashboard metrics from ${startISO} to ${endISO}`);
 
-        // 1. Fetch sales
+        // 1. Fetch sales (usando data_venda e deduplicando por CPF)
         const { data: salesData, error: salesError } = await supabase
           .from('pedidos')
-          .select('*') 
-          .gte('created_at', startISO)
-          .lte('created_at', endISO)
-          .limit(20000); 
+          .select('*')
+          .gte('data_venda', startISO)  // ✅ CORRIGIDO: usar data_venda
+          .lte('data_venda', endISO)
+          .limit(20000);
 
         if (salesError) {
-            console.error("Error fetching sales:", salesError);
+          console.error("Error fetching sales:", salesError);
         }
+
+
+        console.log(`📊 Total de vendas no período: ${salesData?.length || 0}`);
+        console.log(`📅 Período: ${startISO} até ${endISO}`);
 
         let approved = 0;
         let countApproved = 0;
@@ -157,39 +161,52 @@ export const Dashboard: React.FC = () => {
         let pendingPix = 0;
         let pendingBoleto = 0;
 
+        // ✅ Processar TODAS as vendas (cada registro é válido)
         (salesData || []).forEach(order => {
-            const rawVal = order.valor_total ?? order.valor ?? order.amount ?? order.total ?? order.price;
-            const val = parseCurrencyValue(rawVal);
-            
-            const status = (order.status || '').toLowerCase().trim();
-            const method = getPaymentMethod(order);
 
-            if (['aprovado', 'pago', 'paid', 'approved', 'completed', 'succeeded'].includes(status)) {
-                approved += val;
-                countApproved++;
-            } else if (['pendente', 'waiting payment', 'aguardando', 'pending', 'waiting_payment', 'processing'].includes(status)) {
-                pending += val;
-                countPending++;
-                if (method.includes('pix')) {
-                    pendingPix += val;
-                } else if (method.includes('boleto')) {
-                    pendingBoleto += val;
-                }
-            } else if (status.includes('expirado') || status.includes('expired')) {
-                expired += val;
-                countExpired++;
-            } else if (status.includes('recusado') || status.includes('refused') || status.includes('denied') || status.includes('falha') || status.includes('failed')) {
-                refused += val;
-                countRefused++;
-            } else if (status.includes('reembolsado') || status.includes('refunded') || status.includes('estornado')) {
-                refunded += val;
-                countRefunded++;
+          const rawVal = order.valor_total ?? order.valor ?? order.amount ?? order.total ?? order.price;
+          const val = parseCurrencyValue(rawVal);
+
+          // ✅ CORRIGIDO: Normalizar status (case-insensitive)
+          const status = (order.status || '').toLowerCase().trim();
+          const method = getPaymentMethod(order);
+
+          if (['aprovado', 'pago', 'paid', 'approved', 'completed', 'succeeded', 'authorized'].includes(status)) {
+            approved += val;
+            countApproved++;
+          } else if (['pendente', 'waiting payment', 'aguardando', 'pending', 'waiting_payment', 'processing'].includes(status)) {
+            pending += val;
+            countPending++;
+
+            // Categorizar por método de pagamento
+            if (method.includes('pix')) {
+              pendingPix += val;
+            } else {
+              // TUDO que não for Pix vai para "Outros" (incluindo sem método definido)
+              pendingBoleto += val;
             }
+          } else if (status.includes('expirado') || status.includes('expired')) {
+            expired += val;
+            countExpired++;
+          } else if (status.includes('recusado') || status.includes('refused') || status.includes('denied') || status.includes('falha') || status.includes('failed')) {
+            refused += val;
+            countRefused++;
+          } else if (status.includes('reembolsado') || status.includes('refunded') || status.includes('estornado')) {
+            refunded += val;
+            countRefunded++;
+          }
         });
+
+        // 🔍 DEBUG: Mostrar totais calculados
+        console.log(`💰 APROVADO: ${countApproved} vendas = R$ ${approved.toFixed(2)}`);
+        console.log(`⏳ PENDENTE: ${countPending} vendas = R$ ${pending.toFixed(2)}`);
+        console.log(`❌ RECUSADO: ${countRefused} vendas = R$ ${refused.toFixed(2)}`);
+        console.log(`⏰ EXPIRADO: ${countExpired} vendas = R$ ${expired.toFixed(2)}`);
+        console.log(`💸 REEMBOLSADO: ${countRefunded} vendas = R$ ${refunded.toFixed(2)}`);
 
         // 2. Aguardando Envio (Logística)
         const { count: pendingCount } = await supabase
-          .from('pedidos_unificados')
+          .from('pedidos_consolidados_v3')
           .select('*', { count: 'exact', head: true })
           .eq('status_envio', 'Pendente')
           .gte('created_at', startISO)
@@ -222,8 +239,8 @@ export const Dashboard: React.FC = () => {
           faturamentoReembolsado: refunded,
           countReembolsado: countRefunded,
           detalhePendente: {
-              pix: pendingPix,
-              boleto: pendingBoleto
+            pix: pendingPix,
+            boleto: pendingBoleto
           },
           aguardandoEnvio: pendingCount || 0,
           assinaturasAtrasadas: lateCount || 0,
@@ -270,14 +287,14 @@ export const Dashboard: React.FC = () => {
           subtext="Contas a Receber (Total)"
           footer={
             <>
-                <div className="flex justify-between items-center">
-                    <span className="flex items-center gap-1"><QrCode className="w-3 h-3 text-teal-400"/> Pix:</span>
-                    <span className="text-slate-900 dark:text-slate-200">{formatCurrency(metrics.detalhePendente.pix)}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                    <span className="flex items-center gap-1"><Barcode className="w-3 h-3 text-slate-400"/> Boleto:</span>
-                    <span className="text-slate-900 dark:text-slate-200">{formatCurrency(metrics.detalhePendente.boleto)}</span>
-                </div>
+              <div className="flex justify-between items-center">
+                <span className="flex items-center gap-1"><QrCode className="w-3 h-3 text-teal-400" /> Pix:</span>
+                <span className="text-slate-900 dark:text-slate-200">{formatCurrency(metrics.detalhePendente.pix)}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="flex items-center gap-1"><Barcode className="w-3 h-3 text-slate-400" /> Outros:</span>
+                <span className="text-slate-900 dark:text-slate-200">{formatCurrency(metrics.detalhePendente.boleto)}</span>
+              </div>
             </>
           }
         />
@@ -312,7 +329,7 @@ export const Dashboard: React.FC = () => {
       <div>
         <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-4">Métricas de Conversão & Perdas</h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <MetricCard
+          <MetricCard
             title="Expirado (Perdido)"
             value={formatCurrency(metrics.faturamentoExpirado)}
             count={metrics.countExpirado}
@@ -320,8 +337,8 @@ export const Dashboard: React.FC = () => {
             icon={XCircle}
             loading={loading}
             color="bg-slate-500 text-slate-500"
-            />
-            <MetricCard
+          />
+          <MetricCard
             title="Recusado (Cartão)"
             value={formatCurrency(metrics.faturamentoRecusado)}
             count={metrics.countRecusado}
@@ -329,8 +346,8 @@ export const Dashboard: React.FC = () => {
             icon={Ban}
             loading={loading}
             color="bg-orange-500 text-orange-500"
-            />
-             <MetricCard
+          />
+          <MetricCard
             title="Reembolsado"
             value={formatCurrency(metrics.faturamentoReembolsado)}
             count={metrics.countReembolsado}
@@ -338,7 +355,7 @@ export const Dashboard: React.FC = () => {
             icon={RefreshCcw}
             loading={loading}
             color="bg-rose-500 text-rose-500"
-            />
+          />
         </div>
       </div>
     </div>

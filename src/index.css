@@ -1,0 +1,11 @@
+@import "tailwindcss";
+
+:root {
+  --surface: #ffffff;
+  --border: #e2e8f0;
+}
+
+.dark {
+  --surface: #1e293b;
+  --border: #334155;
+}
