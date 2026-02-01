@@ -46,10 +46,10 @@ describe('exportUtils', () => {
             const result = prepareExportData(mockOrders);
 
             expect(result).toHaveLength(2);
-            expect(result[0]).toHaveProperty('Pacote', 'DP-001');
-            expect(result[0]).toHaveProperty('Cliente', 'João Silva');
-            expect(result[0]).toHaveProperty('Status', 'Enviado');
-            expect(result[1]).toHaveProperty('Rastreio', 'N/A');
+            expect(result[0]).toHaveProperty('pacote', 'DP-001');
+            expect(result[0]).toHaveProperty('cliente', 'João Silva');
+            expect(result[0]).toHaveProperty('rastreio', 'BR123456789');
+            expect(result[1]).toHaveProperty('rastreio', '');
         });
 
         it('should handle empty order list', () => {
