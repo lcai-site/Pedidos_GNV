@@ -70,12 +70,13 @@ export const validateOrder = (order: any): ValidationErrors => {
  */
 export const validateField = (fieldName: string, value: any): string | null => {
     switch (fieldName) {
-        case 'cpf':
+        case 'cpf': {
             const cpfLimpo = String(value || '').replace(/\D/g, '');
             if (!cpfLimpo || cpfLimpo.length !== 11) {
                 return 'CPF deve ter 11 dígitos';
             }
             break;
+        }
 
         case 'nome':
         case 'nome_cliente':
@@ -84,12 +85,13 @@ export const validateField = (fieldName: string, value: any): string | null => {
             }
             break;
 
-        case 'cep':
+        case 'cep': {
             const cepLimpo = String(value || '').replace(/\D/g, '');
             if (!cepLimpo || cepLimpo.length !== 8) {
                 return 'CEP deve ter 8 dígitos';
             }
             break;
+        }
 
         case 'logradouro':
             if (!value || String(value).trim().length < 3) {
