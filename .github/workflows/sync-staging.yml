@@ -1,0 +1,49 @@
+# Sincronização automática: Produção → Staging
+# Executa diariamente às 6h da manhã (horário de Brasília) ou manualmente
+
+name: Sync Production to Staging
+
+on:
+  # Execução agendada (diariamente às 9h UTC = 6h BRT)
+  schedule:
+    - cron: '0 9 * * *'
+  
+  # Execução manual pelo GitHub
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: 'Motivo da sincronização manual'
+        required: false
+        default: 'Sincronização manual'
+
+jobs:
+  sync:
+    name: Sync Data
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      
+      - name: Instalar dependências
+        run: npm ci
+      
+      - name: Executar sincronização
+        env:
+          SUPABASE_PROD_SERVICE_KEY: ${{ secrets.SUPABASE_PROD_SERVICE_KEY }}
+          SUPABASE_STAGING_SERVICE_KEY: ${{ secrets.SUPABASE_STAGING_SERVICE_KEY }}
+        run: node scripts/sync-to-staging.mjs
+      
+      - name: Notificar sucesso
+        if: success()
+        run: echo "✅ Sincronização concluída com sucesso!"
+      
+      - name: Notificar falha
+        if: failure()
+        run: echo "❌ Sincronização falhou. Verifique os logs."
