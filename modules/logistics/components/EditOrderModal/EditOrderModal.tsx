@@ -39,42 +39,41 @@ export const EditOrderModal: React.FC<EditOrderModalProps> = ({
         <Modal
             isOpen={isOpen}
             onClose={onClose}
-            title="Editar Pedido"
+            title="EDITAR DADOS DO PEDIDO"
             size="lg"
         >
             <div className="space-y-6">
                 {/* Alerta de Erros */}
+                {/* Alerta de Erros CPU */}
                 {hasErrors && (
-                    <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+                    <div className="bg-[#ef4444]/5 border border-[#ef4444]/40 p-4">
                         <div className="flex items-start gap-3">
-                            <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+                            <AlertCircle className="w-5 h-5 text-[#ef4444] flex-shrink-0 mt-0.5" />
                             <div>
-                                <h4 className="text-sm font-medium text-red-800 dark:text-red-300 mb-1">
-                                    Campos com erros
+                                <h4 className="text-[11px] font-mono font-bold uppercase tracking-widest text-[#ef4444] mb-1">
+                                    ATENÇÃO: VERIFIQUE OS CAMPOS
                                 </h4>
-                                <p className="text-xs text-red-600 dark:text-red-400">
-                                    Por favor, corrija os campos marcados em vermelho antes de salvar.
+                                <p className="text-[10px] font-mono uppercase text-slate-400">
+                                    Corrija os campos marcados em vermelho antes de salvar as alterações.
                                 </p>
                             </div>
                         </div>
                     </div>
                 )}
 
-                {/* Informações do Pedido */}
-                <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4">
-                    <div className="grid grid-cols-2 gap-4 text-sm">
-                        <div>
-                            <span className="text-slate-500 dark:text-slate-400">Código:</span>
-                            <span className="ml-2 font-medium text-slate-700 dark:text-slate-300">
-                                {order.codigo_transacao || order.id?.slice(0, 8)}
-                            </span>
-                        </div>
-                        <div>
-                            <span className="text-slate-500 dark:text-slate-400">Produto:</span>
-                            <span className="ml-2 font-medium text-slate-700 dark:text-slate-300">
-                                {order.descricao_pacote || 'N/D'}
-                            </span>
-                        </div>
+                {/* Informações do Pedido Terminal */}
+                <div className="bg-[#0f172a] border border-slate-800 p-4 space-y-2">
+                    <div className="text-xs font-mono uppercase tracking-widest flex items-center">
+                        <span className="text-slate-500 w-24">CÓDIGO:</span>
+                        <span className="font-bold text-[#a3e635] break-all">
+                            {order.codigo_transacao || order.id?.slice(0, 8)}
+                        </span>
+                    </div>
+                    <div className="text-xs font-mono uppercase tracking-widest flex items-center">
+                        <span className="text-slate-500 w-24">PRODUTO:</span>
+                        <span className="font-bold text-slate-200 pl-2 border-l border-slate-700 ml-2">
+                            {order.descricao_pacote || order.nome_oferta || 'UNREGISTERED_DATA'}
+                        </span>
                     </div>
                 </div>
 
@@ -95,31 +94,30 @@ export const EditOrderModal: React.FC<EditOrderModalProps> = ({
                     />
                 </div>
 
-                {/* Botões */}
-                <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-200 dark:border-slate-700">
+                {/* Botões Terminal */}
+                <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-800 bg-[#020617]">
                     <button
                         onClick={onClose}
                         disabled={saving}
-                        className="px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        className="px-5 py-2.5 text-[10px] font-mono font-bold uppercase tracking-widest text-slate-500 border border-slate-800 hover:text-slate-300 hover:border-slate-500 disabled:opacity-50 transition-colors flex items-center justify-center min-w-[120px]"
                     >
-                        <X className="w-4 h-4 inline-block mr-1" />
-                        Cancelar
+                        CANCELAR
                     </button>
 
                     <button
                         onClick={onSave}
                         disabled={saving || hasErrors}
-                        className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+                        className="px-5 py-2.5 text-[10px] font-mono font-bold uppercase tracking-widest text-[#020617] bg-[#a3e635] hover:bg-[#84cc16] disabled:opacity-50 transition-colors flex items-center justify-center min-w-[180px] gap-2 shadow-[inset_0_1px_3px_rgba(255,255,255,0.3)]"
                     >
                         {saving ? (
                             <>
-                                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                                Salvando...
+                                <div className="w-3.5 h-3.5 border border-[#020617] border-t-transparent animate-spin" />
+                                SALVANDO...
                             </>
                         ) : (
                             <>
-                                <Save className="w-4 h-4" />
-                                Salvar Alterações
+                                <Save className="w-3.5 h-3.5" />
+                                SALVAR ALTERAÇÕES
                             </>
                         )}
                     </button>

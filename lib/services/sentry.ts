@@ -13,7 +13,6 @@ export function initSentry() {
 
     // Só inicializa se tiver DSN configurado
     if (!dsn) {
-        console.warn('⚠️ Sentry DSN não configurado. Monitoramento desativado.');
         return;
     }
 
@@ -45,7 +44,6 @@ export function initSentry() {
         },
     });
 
-    console.log('✅ Sentry inicializado');
 }
 
 /**

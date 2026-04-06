@@ -1,5 +1,6 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
+import './styles.css';
 import App from './App';
 import { validateEnvironment, logEnvironmentInfo } from './lib/config/environment';
 import { QueryProvider, ToastProvider } from './lib/providers';

@@ -8,6 +8,27 @@ export const config = {
 const MELHOR_ENVIO_API = 'https://melhorenvio.com.br/api/v2';
 
 export default async function handler(request: Request) {
+    // CORS origin whitelist
+    const allowedOrigins = [
+        'https://pedidos-gnv.vercel.app',
+        'http://localhost:5173',
+        'http://localhost:3000'
+    ];
+    const origin = request.headers.get('Origin') || '';
+    const allowOrigin = allowedOrigins.includes(origin) ? origin : allowedOrigins[0];
+
+    // Tratamento de CORS - Resposta imediata para preflight
+    if (request.method === 'OPTIONS') {
+        return new Response(null, {
+            status: 200,
+            headers: {
+                'Access-Control-Allow-Origin': allowOrigin,
+                'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+                'Access-Control-Allow-Headers': 'Content-Type, Authorization, User-Agent, Accept',
+            },
+        });
+    }
+
     // Pegar o path da URL
     const url = new URL(request.url);
     const pathname = url.pathname.replace('/api/melhor-envio', '');
@@ -38,7 +59,7 @@ export default async function handler(request: Request) {
             status: response.status,
             headers: {
                 'Content-Type': 'application/json',
-                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Origin': allowOrigin,
                 'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
                 'Access-Control-Allow-Headers': 'Content-Type, Authorization, User-Agent',
             },
@@ -52,7 +73,7 @@ export default async function handler(request: Request) {
                 status: 500,
                 headers: {
                     'Content-Type': 'application/json',
-                    'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Origin': allowOrigin,
                 },
             }
         );

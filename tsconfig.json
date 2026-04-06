@@ -18,12 +18,14 @@
     "moduleDetection": "force",
     "allowJs": true,
     "jsx": "react-jsx",
+    "baseUrl": ".",
     "paths": {
-      "@/*": [
-        "./*"
-      ]
+      "@/*": ["./*"],
+      "@core/*": ["./src/core/*"],
+      "@modules/*": ["./src/modules/*"]
     },
     "allowImportingTsExtensions": true,
     "noEmit": true
-  }
+  },
+  "exclude": ["node_modules", "dist", "supabase/functions"]
 }

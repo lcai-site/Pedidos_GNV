@@ -1,9 +1,11 @@
 /**
  * Configuração de Ambiente
- * 
+ *
  * Este arquivo centraliza todas as configurações de ambiente da aplicação.
  * Suporta múltiplos ambientes: development, production
  */
+
+import { logger } from '../utils/logger';
 
 export const ENV = {
     // Identificação do ambiente
@@ -48,7 +50,7 @@ export const ENV = {
  */
 export const devLog = (...args: any[]) => {
     if (ENV.isDevelopment || ENV.features.enableDebug) {
-        console.log('[DEV]', ...args);
+        logger.info(args.join(' '), { legacy: true, module: 'DEV' });
     }
 };
 
@@ -56,7 +58,7 @@ export const devLog = (...args: any[]) => {
  * Helper para logs de erro
  */
 export const errorLog = (...args: any[]) => {
-    console.error('[ERROR]', ...args);
+    logger.error(args.join(' '), { legacy: true, module: 'ERROR' });
 };
 
 /**
@@ -88,9 +90,12 @@ export function validateEnvironment(): { valid: boolean; errors: string[] } {
  */
 export function logEnvironmentInfo() {
     if (ENV.isDevelopment) {
-        console.log('🌍 Ambiente:', ENV.environment);
-        console.log('🔧 Debug:', ENV.features.enableDebug);
-        console.log('🧪 Mock APIs:', ENV.features.mockAPIs);
-        console.log('🔌 Supabase URL:', ENV.supabase.url);
+        logger.info('Informações do ambiente', {
+            module: 'ENV',
+            environment: ENV.environment,
+            debug: ENV.features.enableDebug,
+            mockAPIs: ENV.features.mockAPIs,
+            supabaseUrl: ENV.supabase.url,
+        });
     }
 }

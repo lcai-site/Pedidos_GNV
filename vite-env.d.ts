@@ -5,6 +5,7 @@ interface ImportMetaEnv {
     readonly VITE_MELHOR_ENVIO_USER_AGENT: string
     readonly VITE_OPEN_ROUTER_API_KEY: string
     readonly VITE_OPEN_ROUTER_MODEL: string
+    readonly VITE_ENVIRONMENT: string
 }
 
 interface ImportMeta {

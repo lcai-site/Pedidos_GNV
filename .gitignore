@@ -19,6 +19,10 @@ dist-ssr
 .env.production
 .env.*.local
 
+# Credential backups
+.env.local.backup
+CREDENTIALS_BACKUP.md
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

@@ -6,11 +6,9 @@ import type {
     SolicitacaoHistorico,
     StatusSolicitacao,
 } from '../types/solicitacoes';
+import { logger } from '../utils/logger';
 
 export class SolicitacoesService {
-    /**
-     * Buscar todas as solicitações (com filtros opcionais)
-     */
     async buscarSolicitacoes(filtros?: {
         status?: StatusSolicitacao;
         tipo?: string;
@@ -37,17 +35,13 @@ export class SolicitacoesService {
             }
 
             const { data, error } = await query;
-
             return { data, error };
         } catch (error) {
-            console.error('Erro ao buscar solicitações:', error);
+            logger.error('Erro ao buscar solicitações', error, { service: 'SolicitacoesService', action: 'buscarSolicitacoes' });
             return { data: null, error };
         }
     }
 
-    /**
-     * Buscar solicitação por ID
-     */
     async buscarPorId(id: string): Promise<{ data: Solicitacao | null; error: any }> {
         try {
             const { data, error } = await supabase
@@ -58,14 +52,11 @@ export class SolicitacoesService {
 
             return { data, error };
         } catch (error) {
-            console.error('Erro ao buscar solicitação:', error);
+            logger.error('Erro ao buscar solicitação', error, { service: 'SolicitacoesService', action: 'buscarPorId', id });
             return { data: null, error };
         }
     }
 
-    /**
-     * Criar nova solicitação
-     */
     async criar(input: CriarSolicitacaoInput): Promise<{ data: Solicitacao | null; error: any }> {
         try {
             const { data: { user } } = await supabase.auth.getUser();
@@ -76,170 +67,170 @@ export class SolicitacoesService {
                     ...input,
                     criado_por: user?.id,
                     status: 'pendente',
+                    // Campos de reenvio (opcionais)
+                    necessita_reenvio: input.necessita_reenvio ?? false,
+                    pedido_reenvio_id: input.pedido_reenvio_id ?? null,
+                    responsavel_reenvio_id: input.responsavel_reenvio_id ?? null,
+                    observacoes_reenvio: input.observacoes_reenvio ?? null,
                 })
                 .select()
                 .single();
 
             return { data, error };
         } catch (error) {
-            console.error('Erro ao criar solicitação:', error);
+            logger.error('Erro ao criar solicitação', error, { service: 'SolicitacoesService', action: 'criar', input });
             return { data: null, error };
         }
     }
 
-    /**
-     * Atualizar solicitação
-     */
     async atualizar(
         id: string,
         input: AtualizarSolicitacaoInput
     ): Promise<{ data: Solicitacao | null; error: any }> {
         try {
-            const updateData: any = { ...input };
-
-            // Se está aprovando, adicionar aprovado_por e aprovado_em
-            if (input.status === 'aprovada') {
-                const { data: { user } } = await supabase.auth.getUser();
-                updateData.aprovado_por = user?.id;
-                updateData.aprovado_em = new Date().toISOString();
-            }
-
-            // Se está concluindo, adicionar concluido_em
-            if (input.status === 'concluida') {
-                updateData.concluido_em = new Date().toISOString();
-            }
-
             const { data, error } = await supabase
                 .from('solicitacoes')
-                .update(updateData)
+                .update({
+                    ...input,
+                    updated_at: new Date().toISOString(),
+                })
                 .eq('id', id)
                 .select()
                 .single();
 
             return { data, error };
         } catch (error) {
-            console.error('Erro ao atualizar solicitação:', error);
+            logger.error('Erro ao atualizar solicitação', error, { service: 'SolicitacoesService', action: 'atualizar', id, input });
             return { data: null, error };
         }
     }
 
-    /**
-     * Aprovar solicitação
-     */
-    async aprovar(id: string, observacoes_internas?: string): Promise<{ data: Solicitacao | null; error: any }> {
-        return this.atualizar(id, {
-            status: 'aprovada',
-            observacoes_internas,
-        });
-    }
-
-    /**
-     * Recusar solicitação
-     */
-    async recusar(id: string, observacoes_internas: string): Promise<{ data: Solicitacao | null; error: any }> {
-        return this.atualizar(id, {
-            status: 'recusada',
-            observacoes_internas,
-        });
-    }
-
-    /**
-     * Concluir solicitação
-     */
-    async concluir(id: string): Promise<{ data: Solicitacao | null; error: any }> {
-        return this.atualizar(id, {
-            status: 'concluida',
-        });
-    }
-
-    /**
-     * Cancelar solicitação
-     */
-    async cancelar(id: string, motivo?: string): Promise<{ data: Solicitacao | null; error: any }> {
-        return this.atualizar(id, {
-            status: 'cancelada',
-            observacoes_internas: motivo,
-        });
-    }
-
-    /**
-     * Buscar histórico de uma solicitação
-     */
-    async buscarHistorico(solicitacaoId: string): Promise<{ data: SolicitacaoHistorico[] | null; error: any }> {
+    async buscarHistorico(id: string): Promise<{ data: SolicitacaoHistorico[] | null; error: any }> {
         try {
             const { data, error } = await supabase
                 .from('solicitacoes_historico')
                 .select('*')
-                .eq('solicitacao_id', solicitacaoId)
-                .order('alterado_em', { ascending: false });
+                .eq('solicitacao_id', id)
+                .order('created_at', { ascending: false });
 
             return { data, error };
         } catch (error) {
-            console.error('Erro ao buscar histórico:', error);
+            logger.error('Erro ao buscar histórico', error, { service: 'SolicitacoesService', action: 'buscarHistorico', id });
             return { data: null, error };
         }
     }
 
-    /**
-     * Buscar estatísticas de solicitações
-     */
-    async buscarEstatisticas(): Promise<{
-        total: number;
-        pendentes: number;
-        em_analise: number;
-        aprovadas: number;
-        recusadas: number;
-        concluidas: number;
-    }> {
+    async buscarEstatisticas(): Promise<{ data: any | null; error: any }> {
         try {
-            const { data } = await supabase
+            const { data, error } = await supabase
                 .from('solicitacoes')
-                .select('status');
+                .select('status, tipo');
 
-            if (!data) return {
-                total: 0,
-                pendentes: 0,
-                em_analise: 0,
-                aprovadas: 0,
-                recusadas: 0,
-                concluidas: 0,
+            if (error) throw error;
+
+            const estatisticas = {
+                total: data?.length || 0,
+                porStatus: {} as Record<string, number>,
+                porTipo: {} as Record<string, number>,
             };
 
-            return {
-                total: data.length,
-                pendentes: data.filter(s => s.status === 'pendente').length,
-                em_analise: data.filter(s => s.status === 'em_analise').length,
-                aprovadas: data.filter(s => s.status === 'aprovada').length,
-                recusadas: data.filter(s => s.status === 'recusada').length,
-                concluidas: data.filter(s => s.status === 'concluida').length,
-            };
+            data?.forEach((item) => {
+                estatisticas.porStatus[item.status] = (estatisticas.porStatus[item.status] || 0) + 1;
+                estatisticas.porTipo[item.tipo] = (estatisticas.porTipo[item.tipo] || 0) + 1;
+            });
+
+            return { data: estatisticas, error: null };
         } catch (error) {
-            console.error('Erro ao buscar estatísticas:', error);
-            return {
-                total: 0,
-                pendentes: 0,
-                em_analise: 0,
-                aprovadas: 0,
-                recusadas: 0,
-                concluidas: 0,
-            };
+            logger.error('Erro ao buscar estatísticas', error, { service: 'SolicitacoesService', action: 'buscarEstatisticas' });
+            return { data: null, error };
         }
     }
 
-    /**
-     * Deletar solicitação (apenas gestores/ADM)
-     */
     async deletar(id: string): Promise<{ error: any }> {
         try {
-            const { error } = await supabase
-                .from('solicitacoes')
-                .delete()
-                .eq('id', id);
-
+            const { error } = await supabase.from('solicitacoes').delete().eq('id', id);
             return { error };
         } catch (error) {
-            console.error('Erro ao deletar solicitação:', error);
+            logger.error('Erro ao deletar solicitação', error, { service: 'SolicitacoesService', action: 'deletar', id });
             return { error };
+        }
+    }
+
+    // ─── Emite reenvio: chama SQL que duplica o pedido original ──────────────
+    async emitirReenvio(
+        pedidoOrigemId: string,
+        solicitacaoId: string,
+        observacaoExtra?: string
+    ): Promise<{ data: string | null; error: any }> {
+        try {
+            const { data, error } = await supabase.rpc('duplicar_pedido_como_reenvio', {
+                p_pedido_id: pedidoOrigemId,
+                p_solicitacao_id: solicitacaoId,
+                p_observacao_extra: observacaoExtra || null,
+            });
+            if (error) throw error;
+            return { data: data as string, error: null };
+        } catch (error) {
+            logger.error('Erro ao emitir reenvio', error, {
+                service: 'SolicitacoesService',
+                action: 'emitirReenvio',
+                pedidoOrigemId,
+                solicitacaoId,
+            });
+            return { data: null, error };
+        }
+    }
+
+    async aprovar(id: string, observacoes?: string): Promise<{ data: Solicitacao | null; error: any }> {
+        try {
+            // 👤 Capturar usuário atual para registrar quem aprovou
+            const { data: { user } } = await supabase.auth.getUser();
+
+            const { data, error } = await supabase
+                .from('solicitacoes')
+                .update({
+                    status: 'aprovada',
+                    observacoes_internas: observacoes || null,
+                    aprovado_por: user?.id || null,
+                    aprovado_em: new Date().toISOString(),
+                    updated_at: new Date().toISOString(),
+                })
+                .eq('id', id)
+                .select()
+                .single();
+
+            if (error) throw error;
+            return { data, error: null };
+        } catch (error) {
+            logger.error('Erro ao aprovar solicitação', error, { service: 'SolicitacoesService', action: 'aprovar', id });
+            return { data: null, error };
+        }
+    }
+
+    async recusar(id: string, justificativa: string): Promise<{ data: Solicitacao | null; error: any }> {
+        try {
+            // 👤 Capturar usuário atual para registrar quem recusou
+            const { data: { user } } = await supabase.auth.getUser();
+
+            const { data, error } = await supabase
+                .from('solicitacoes')
+                .update({
+                    status: 'recusada',
+                    justificativa_recusa: justificativa,
+                    observacoes_internas: justificativa,
+                    aprovado_por: user?.id || null,
+                    aprovado_em: new Date().toISOString(),
+                    updated_at: new Date().toISOString(),
+                })
+                .eq('id', id)
+                .select()
+                .single();
+
+            if (error) throw error;
+            return { data, error: null };
+        } catch (error) {
+            logger.error('Erro ao recusar solicitação', error, { service: 'SolicitacoesService', action: 'recusar', id });
+            return { data: null, error };
         }
     }
 }

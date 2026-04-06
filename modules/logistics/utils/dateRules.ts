@@ -13,24 +13,15 @@ import { addDays, getDay } from 'date-fns';
  * - Sexta-feira: +4 dias (Terça encerra janela)
  * - Outros dias: +2 dias
  * 
- * @param orderDateStr - Data da venda (ISO string)
+ * @param dateStr - Data de referência (confirmação do pagamento ou venda)
  * @returns Data segura de envio
- * 
- * @example
- * getSafeShipDate("2026-01-29") // Quinta → +4 dias = 2026-02-02 (Segunda)
- * getSafeShipDate("2026-01-27") // Terça → +2 dias = 2026-01-29 (Quinta)
  */
-export const getSafeShipDate = (orderDateStr: string): Date => {
-    const d = new Date(orderDateStr);
+export const getSafeShipDate = (dateStr: string): Date => {
+    const d = new Date(dateStr);
     const dayOfWeek = getDay(d); // 0 = Domingo, 4 = Quinta, 5 = Sexta
 
-    // Quinta (4) → +4 dias (Segunda encerra janela)
-    if (dayOfWeek === 4) {
-        return addDays(d, 4);
-    }
-
-    // Sexta (5) → +4 dias (Terça encerra janela)
-    if (dayOfWeek === 5) {
+    // Quinta (4) ou Sexta (5) → +4 dias para garantir a janela de pós-venda
+    if (dayOfWeek === 4 || dayOfWeek === 5) {
         return addDays(d, 4);
     }
 
@@ -39,12 +30,26 @@ export const getSafeShipDate = (orderDateStr: string): Date => {
 };
 
 /**
- * Verifica se uma data está dentro da janela de pós-venda
+ * Calcula o dia em que o Pós-Venda deve ser realizado (próximo dia útil após a referência)
  * 
- * @param orderDate - Data da venda
- * @param referenceDate - Data de referência (hoje)
- * @returns true se ainda está na janela de pós-venda
+ * Regras:
+ * - Sexta (5), Sábado (6) ou Domingo (0) → Segunda-feira
+ * - Demais → dia seguinte
+ * 
+ * @param dateStr - Data de referência (confirmação do pagamento ou venda)
+ * @returns Data do Pós-Venda
  */
+export const getPostSaleDate = (dateStr: string): Date => {
+    const d = new Date(dateStr);
+    const dayOfWeek = getDay(d);
+
+    if (dayOfWeek === 5) return addDays(d, 3); // Sexta → Segunda
+    if (dayOfWeek === 6) return addDays(d, 2); // Sábado → Segunda
+    if (dayOfWeek === 0) return addDays(d, 1); // Domingo → Segunda
+
+    return addDays(d, 1); // Dias normais → dia seguinte
+};
+
 export const isWithinPostSaleWindow = (orderDate: Date, referenceDate: Date): boolean => {
     const safeShipDate = getSafeShipDate(orderDate.toISOString());
     return referenceDate < safeShipDate;

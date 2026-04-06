@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { Modal } from './Modal';
 import { Loader2, CheckCircle2, XCircle, AlertCircle } from 'lucide-react';
 import type { JobStatus } from '../../types/labels';
+import { logger } from '../../lib/utils/logger';
 
 interface LabelProgressModalProps {
     isOpen: boolean;
@@ -41,7 +42,7 @@ export const LabelProgressModal: React.FC<LabelProgressModalProps> = ({
                     }
                 }
             } catch (error) {
-                console.error('Erro ao buscar status:', error);
+                logger.error('Erro ao buscar status da geração', error, { module: 'LabelProgressModal', jobId });
             }
         };
 

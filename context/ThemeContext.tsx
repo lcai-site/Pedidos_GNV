@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useMemo, useCallback } from 'react';
 
 type Theme = 'dark' | 'light';
 
@@ -11,13 +11,12 @@ interface ThemeContextType {
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // Inicializa com o tema salvo ou padrão dark
   const [theme, setTheme] = useState<Theme>(() => {
     const saved = localStorage.getItem('theme');
     return (saved as Theme) || 'dark';
   });
 
-  const logoUrl = theme === 'dark' 
+  const logoUrl = theme === 'dark'
     ? 'https://midias.lcai.com.br/images/2026/01/23/GNV---Branco.webp'
     : 'https://midias.lcai.com.br/images/2026/01/23/GNV---Preto.webp';
 
@@ -28,12 +27,18 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     localStorage.setItem('theme', theme);
   }, [theme]);
 
-  const toggleTheme = () => {
+  const toggleTheme = useCallback(() => {
     setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
-  };
+  }, []);
+
+  const value = useMemo(() => ({
+    theme,
+    toggleTheme,
+    logoUrl,
+  }), [theme, toggleTheme, logoUrl]);
 
   return (
-    <ThemeContext.Provider value={{ theme, toggleTheme, logoUrl }}>
+    <ThemeContext.Provider value={value}>
       {children}
     </ThemeContext.Provider>
   );

@@ -15,12 +15,10 @@ export const fetchOrders = async (): Promise<PedidoUnificado[]> => {
     const { data, error } = await supabase
         .from('pedidos_consolidados_v3')
         .select('*')
-        .order('data_venda', { ascending: false })
+        .order('created_at', { ascending: false })
         .limit(5000);
 
     if (error) throw error;
-
-    console.log(`📦 LOGÍSTICA: Carregados ${data?.length || 0} pedidos pendentes`);
 
     return data || [];
 };
@@ -107,7 +105,7 @@ export const updateOrderData = async (
     }
 
     const count = data || 0;
-    console.log(`✅ ${count} registro(s) atualizado(s) via SQL function!`);
+
 
     return count;
 };

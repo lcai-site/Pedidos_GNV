@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { Lock, Mail, Loader2, AlertCircle, ArrowRight, UserPlus, CheckCircle, Database, Wrench } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
+import { logger } from '../lib/utils/logger';
 
 export const LoginPage: React.FC = () => {
   const navigate = useNavigate();
@@ -11,6 +12,7 @@ export const LoginPage: React.FC = () => {
   const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [nomeCompleto, setNomeCompleto] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -43,7 +45,9 @@ export const LoginPage: React.FC = () => {
 
     try {
       if (isSignUp) {
-        // --- FLUXO DE CADASTRO ---
+        // --- FLUXO DE SOLICITAÇÃO DE ACESSO ---
+        // Cria o usuário no Auth mas com ativo=FALSE no perfil.
+        // ADM precisa aprovar em Usuários > Ativar antes de poder entrar.
         const { data, error } = await supabase.auth.signUp({
           email,
           password,
@@ -52,21 +56,28 @@ export const LoginPage: React.FC = () => {
         if (error) throw error;
 
         if (data.user) {
-          await new Promise(resolve => setTimeout(resolve, 1000));
+          // Aguarda o trigger criar o perfil base, depois atualiza o nome
+          await new Promise(resolve => setTimeout(resolve, 1500));
 
-          const { data: profile } = await supabase
+          await supabase
             .from('profiles')
-            .select('id')
-            .eq('id', data.user.id)
-            .single();
+            .upsert({
+              id: data.user.id,
+              email: data.user.email,
+              nome_completo: nomeCompleto,
+              role: 'atendente',
+              ativo: false, // Aguarda aprovação do ADM
+              created_at: new Date().toISOString(),
+            }, { onConflict: 'id' });
 
-          if (!profile) {
-            setSuccess("Conta criada. Faça login para concluir a configuração.");
-          } else {
-            setSuccess("Conta criada com sucesso! Você já pode entrar.");
-          }
+          // Sign out imediato — não pode entrar sem aprovação
+          await supabase.auth.signOut();
+
+          setSuccess("Solicitação enviada! Aguarde a aprovação do administrador para acessar o sistema.");
           setIsSignUp(false);
+          setEmail('');
           setPassword('');
+          setNomeCompleto('');
         }
 
       } else {
@@ -79,52 +90,40 @@ export const LoginPage: React.FC = () => {
         if (authError) throw authError;
         if (!authData.user) throw new Error("Erro ao identificar usuário.");
 
+        // Tenta buscar perfil, mas NÃO bloqueia login se falhar
         const { data: profile } = await supabase
           .from('profiles')
-          .select('*')
+          .select('id')
           .eq('id', authData.user.id)
-          .single();
+          .maybeSingle();
 
-        // Self-Healing
+        // Self-Healing: tenta criar perfil se não existir (best-effort)
         if (!profile) {
-          console.log("Auto-corrigindo perfil...");
-          const { error: insertError } = await supabase
-            .from('profiles')
-            .insert([
-              {
+          try {
+            await supabase
+              .from('profiles')
+              .upsert({
                 id: authData.user.id,
                 email: authData.user.email,
                 role: 'usuario',
                 created_at: new Date().toISOString()
-              }
-            ]);
-
-          if (insertError) {
-            await supabase.auth.signOut();
-            throw new Error("Erro ao restaurar perfil.");
+              }, { onConflict: 'id' });
+          } catch {
+            // Se falhar por RLS, não tem problema — AuthContext usa fallback
           }
-          setSuccess("Perfil restaurado. Redirecionando...");
         }
 
-        // Forçar reload completo para garantir atualização do estado de auth
-        setTimeout(() => {
-          window.location.href = '/#/';
-        }, 500);
+        // Redirecionar sempre (AuthContext cuida do fallback de perfil)
+        window.location.replace('/');
       }
     } catch (err: any) {
-      // Log completo do erro para debug
-      console.error('Erro completo:', err);
-      console.error('Mensagem:', err.message);
-      console.error('Código:', err.code);
-      console.error('Status:', err.status);
+      logger.error('Erro de autenticação', err, { module: 'LoginPage', email, isSignUp });
 
-      if (!isSignUp && !err.message.includes('restaurado')) await supabase.auth.signOut();
+      if (!isSignUp) await supabase.auth.signOut();
 
       if (err.message === 'Invalid login credentials') {
         setError('Senha incorreta ou email não cadastrado.');
-      } else if (err.message.includes('already') || err.message.includes('registered') || err.code === '23505') {
-        setError('E-mail já cadastrado. Faça Login.');
-      } else if (err.message.includes('User already registered')) {
+      } else if (err.message.includes('already') || err.message.includes('registered') || err.code === '23505' || err.message.includes('User already registered')) {
         setError('E-mail já cadastrado. Faça Login.');
       } else {
         setError(err.message || 'Erro inesperado.');
@@ -166,6 +165,20 @@ export const LoginPage: React.FC = () => {
         </div>
 
         <form onSubmit={handleAuth} className="space-y-4">
+          {/* Campo de nome — apenas no fluxo de solicitação de acesso */}
+          {isSignUp && (
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-slate-500 dark:text-slate-400 ml-1">Nome Completo</label>
+              <input
+                type="text"
+                required
+                className="w-full bg-slate-50 dark:bg-slate-950 border border-border rounded-lg px-4 py-2.5 text-slate-900 dark:text-slate-200 placeholder:text-slate-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all"
+                placeholder="Seu nome completo"
+                value={nomeCompleto}
+                onChange={(e) => setNomeCompleto(e.target.value)}
+              />
+            </div>
+          )}
           {error && (
             <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3 flex items-center gap-3 text-red-500 dark:text-red-400 text-sm animate-in fade-in slide-in-from-top-2">
               <AlertCircle className="w-4 h-4 shrink-0" />
@@ -241,7 +254,7 @@ export const LoginPage: React.FC = () => {
             {isSignUp ? (
               <>Já tem cadastro? <strong>Fazer Login</strong></>
             ) : (
-              <>Não tem acesso? <strong>Criar nova conta</strong></>
+              <>Não tem acesso? <strong>Solicitar Acesso</strong></>
             )}
           </button>
 

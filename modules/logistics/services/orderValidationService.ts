@@ -20,11 +20,8 @@ import { ValidationErrors } from '../types/logistics.types';
 export const validateOrder = (order: any): ValidationErrors => {
     const errors: ValidationErrors = {};
 
-    // Validar CPF
-    const cpfLimpo = order.cpf?.replace(/\D/g, '') || '';
-    if (!cpfLimpo || cpfLimpo.length !== 11) {
-        errors.cpf = 'CPF deve ter 11 dígitos';
-    }
+    // CPF: validação não-bloqueante (dados da Ticto podem vir sem zero inicial)
+    // Warnings são tratados separadamente no UI
 
     // Validar Nome
     if (!order.nome_cliente || order.nome_cliente.trim().length < 3) {
@@ -135,4 +132,16 @@ export const validateField = (fieldName: string, value: any): string | null => {
  */
 export const hasValidationErrors = (errors: ValidationErrors): boolean => {
     return Object.keys(errors).length > 0;
+};
+/**
+ * Valida CPF como warning (não bloqueante)
+ * 
+ * @param cpf - Valor do CPF
+ * @returns Mensagem de aviso ou null se OK
+ */
+export const getCpfWarning = (cpf: string): string | null => {
+    const cpfLimpo = String(cpf || '').replace(/\D/g, '');
+    if (!cpfLimpo) return 'CPF não informado';
+    if (cpfLimpo.length !== 11) return `CPF com ${cpfLimpo.length} dígitos (esperado 11)`;
+    return null;
 };

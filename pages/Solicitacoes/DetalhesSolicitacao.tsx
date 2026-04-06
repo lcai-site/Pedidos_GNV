@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { solicitacoesService } from '../../lib/services/solicitacoesService';
+import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../lib/hooks/useAuth';
 import { CanAccess } from '../../components/RBAC/CanAccess';
 import type { Solicitacao } from '../../lib/types/solicitacoes';
 import { STATUS_LABELS, TIPO_LABELS } from '../../lib/types/solicitacoes';
-import { ArrowLeft, CheckCircle, XCircle, Loader2, FileText } from 'lucide-react';
+import { ArrowLeft, CheckCircle, XCircle, Loader2, FileText, UserCheck, ShieldX, RefreshCw, Package, ExternalLink } from 'lucide-react';
 
 export const DetalhesSolicitacaoPage: React.FC = () => {
     const { id } = useParams<{ id: string }>();
@@ -15,6 +16,13 @@ export const DetalhesSolicitacaoPage: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [processando, setProcessando] = useState(false);
     const [observacoesInternas, setObservacoesInternas] = useState('');
+    // 👤 Nome do responsável pela aprovação/rejeição
+    const [aprovadorNome, setAprovadorNome] = useState<string | null>(null);
+    // 🔁 Reenvio
+    const [responsavelReenvioNome, setResponsavelReenvioNome] = useState<string | null>(null);
+    const [emitindoReenvio, setEmitindoReenvio] = useState(false);
+    const [reenvioEmitido, setReenvioEmitido] = useState(false);
+    const [reenvioNovoId, setReenvioNovoId] = useState<string | null>(null);
 
     useEffect(() => {
         if (id) {
@@ -30,6 +38,34 @@ export const DetalhesSolicitacaoPage: React.FC = () => {
         if (data) {
             setSolicitacao(data);
             setObservacoesInternas(data.observacoes_internas || '');
+
+            // Buscar nome do aprovador se houver
+            if (data.aprovado_por) {
+                const { data: prof } = await supabase
+                    .from('profiles')
+                    .select('nome_completo, email')
+                    .eq('id', data.aprovado_por)
+                    .single();
+                setAprovadorNome(prof?.nome_completo || prof?.email || 'Usuário desconhecido');
+            } else {
+                setAprovadorNome(null);
+            }
+            // Buscar nome do responsável pelo reenvio
+            if (data.responsavel_reenvio_id) {
+                const { data: resp } = await supabase
+                    .from('profiles')
+                    .select('nome_completo, email')
+                    .eq('id', data.responsavel_reenvio_id)
+                    .single();
+                setResponsavelReenvioNome(resp?.nome_completo || resp?.email || 'Usuário desconhecido');
+            } else {
+                setResponsavelReenvioNome(null);
+            }
+            // Verifica se já existe reenvio emitido
+            if (data.pedido_reenvio_id) {
+                setReenvioEmitido(true);
+                setReenvioNovoId(data.pedido_reenvio_id);
+            }
         }
         setLoading(false);
     }
@@ -57,6 +93,22 @@ export const DetalhesSolicitacaoPage: React.FC = () => {
             await carregarSolicitacao();
         }
         setProcessando(false);
+    }
+
+    async function handleEmitirReenvio() {
+        if (!id || !solicitacao?.pedido_reenvio_id) return;
+        setEmitindoReenvio(true);
+        const { data: novoId, error } = await solicitacoesService.emitirReenvio(
+            solicitacao.pedido_reenvio_id,
+            id,
+            solicitacao.observacoes_reenvio || undefined
+        );
+        if (!error && novoId) {
+            setReenvioEmitido(true);
+            setReenvioNovoId(novoId);
+            await carregarSolicitacao();
+        }
+        setEmitindoReenvio(false);
     }
 
     if (loading) {
@@ -203,6 +255,83 @@ export const DetalhesSolicitacaoPage: React.FC = () => {
                                 Recusar
                             </button>
                         </div>
+                    </div>
+                )}
+
+                {/* Card de Auditoria: Quem aprovou/recusou */}
+                {solicitacao.aprovado_por && aprovadorNome && (
+                    <div className={`rounded-lg border p-4 mb-6 flex items-center gap-3 ${
+                        solicitacao.status === 'aprovada'
+                            ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800'
+                            : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
+                    }`}>
+                        {solicitacao.status === 'aprovada'
+                            ? <UserCheck className="w-5 h-5 text-green-600 dark:text-green-400 shrink-0" />
+                            : <ShieldX className="w-5 h-5 text-red-600 dark:text-red-400 shrink-0" />}
+                        <div>
+                            <p className={`text-sm font-semibold ${
+                                solicitacao.status === 'aprovada'
+                                    ? 'text-green-800 dark:text-green-200'
+                                    : 'text-red-800 dark:text-red-200'
+                            }`}>
+                                {solicitacao.status === 'aprovada' ? 'Aprovada' : 'Recusada'} por <span className="font-bold">{aprovadorNome}</span>
+                            </p>
+                            {solicitacao.aprovado_em && (
+                                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                                    {new Date(solicitacao.aprovado_em).toLocaleString('pt-BR')}
+                                </p>
+                            )}
+                        </div>
+                    </div>
+                )}
+
+                {/* Card de Reenvio */}
+                {solicitacao.necessita_reenvio && (
+                    <div className="rounded-lg border border-orange-200 dark:border-orange-800 bg-orange-50 dark:bg-orange-900/10 p-5 mb-6">
+                        <div className="flex items-center gap-2 mb-3">
+                            <RefreshCw className="w-5 h-5 text-orange-600 dark:text-orange-400" />
+                            <h3 className="font-semibold text-orange-900 dark:text-orange-100">Reenvio Solicitado</h3>
+                        </div>
+                        <div className="space-y-2 text-sm">
+                            {responsavelReenvioNome && (
+                                <p className="text-slate-700 dark:text-slate-300">
+                                    <span className="font-medium">Responsável:</span> {responsavelReenvioNome}
+                                </p>
+                            )}
+                            {solicitacao.observacoes_reenvio && (
+                                <p className="text-slate-700 dark:text-slate-300">
+                                    <span className="font-medium">Observações:</span> {solicitacao.observacoes_reenvio}
+                                </p>
+                            )}
+                        </div>
+
+                        {/* Botão Emitir Reenvio — visivel apenas para ADM/Gestor com pedido original vinculado */}
+                        <CanAccess permission="solicitacoes:approve">
+                            {solicitacao.pedido_reenvio_id && !reenvioEmitido && (
+                                <button
+                                    onClick={handleEmitirReenvio}
+                                    disabled={emitindoReenvio}
+                                    className="mt-4 flex items-center gap-2 px-5 py-2 bg-orange-600 hover:bg-orange-500 text-white rounded-lg transition-colors disabled:opacity-50 text-sm font-medium"
+                                >
+                                    {emitindoReenvio
+                                        ? <Loader2 className="w-4 h-4 animate-spin" />
+                                        : <RefreshCw className="w-4 h-4" />}
+                                    Emitir Pedido de Reenvio
+                                </button>
+                            )}
+                            {reenvioEmitido && reenvioNovoId && (
+                                <div className="mt-4 flex items-center gap-2 px-4 py-2 bg-green-100 dark:bg-green-900/20 border border-green-300 dark:border-green-700 rounded-lg">
+                                    <Package className="w-4 h-4 text-green-600" />
+                                    <span className="text-sm text-green-800 dark:text-green-200 font-medium">Reenvio emitido com sucesso!</span>
+                                    <a
+                                        href={`/logistics`}
+                                        className="ml-auto flex items-center gap-1 text-xs text-green-700 dark:text-green-300 hover:underline"
+                                    >
+                                        Ver na Logiística <ExternalLink className="w-3 h-3" />
+                                    </a>
+                                </div>
+                            )}
+                        </CanAccess>
                     </div>
                 )}
 

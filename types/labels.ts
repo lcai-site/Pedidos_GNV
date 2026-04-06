@@ -21,17 +21,35 @@ export interface PedidoParaEtiqueta {
     id: string;
     cpf: string;
     nome_cliente: string;
-    telefone: string;
-    email: string;
+    telefone?: string;
+    cliente_cpf?: string;
+    cliente_nome?: string;
+    cliente_cep?: string;
+    endereco_rua?: string;
+    endereco_numero?: string;
+    endereco_complemento?: string;
+    endereco_bairro?: string;
+    endereco_cidade?: string;
+    endereco_estado?: string;
+    cliente_email?: string;
+    nome_oferta?: string;
     cep: string;
-    endereco_completo: string;
-    logradouro: string;
-    numero: string;
-    complemento: string;
-    bairro: string;
-    cidade: string;
-    estado: string;
+    logradouro?: string;
+    numero?: string;
+    complemento?: string;
+    bairro?: string;
+    cidade?: string;
+    estado?: string;
+    email?: string;
+    endereco_completo?: string;
     descricao_pacote: string;
+    peso?: number;
+    dimensoes?: {
+        altura: number;
+        largura: number;
+        comprimento: number;
+    };
+    observacao?: string;
     tentativas_geracao?: number;
 }
 

@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Manual Logística Pedidos GNV</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; margin: 40px; }
+        .header { text-align: center; border-bottom: 3px solid #1a237e; padding-bottom: 20px; margin-bottom: 30px; }
+        .header h1 { color: #1a237e; margin: 0; font-size: 28px; text-transform: uppercase; }
+        .header p { font-weight: bold; color: #555; }
+        .section { margin-bottom: 30px; }
+        .section-title { background: #1a237e; color: #fff; padding: 10px 15px; font-size: 18px; font-weight: bold; margin-bottom: 15px; border-radius: 5px; }
+        .dictionary { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+        .item { padding: 8px; border-left: 5px solid #1a237e; background: #f4f4f9; font-weight: bold; }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        th { background: #eee; text-align: left; padding: 12px; border: 1px solid #ddd; }
+        td { padding: 12px; border: 1px solid #ddd; font-size: 14px; }
+        .highlight { color: #d32f2f; font-weight: bold; }
+        .alert-box { background: #fff3e0; border-left: 10px solid #ff9800; padding: 20px; margin-top: 30px; }
+        .footer { margin-top: 50px; text-align: center; font-size: 12px; color: #888; border-top: 1px solid #eee; padding-top: 10px; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Manual de Logística 2026</h1>
+        <p>Padronização de Nomenclatura e Separação de Pedidos</p>
+    </div>
+
+    <div class="section">
+        <div class="section-title">1. DICIONÁRIO DE SIGLAS (MARCAS)</div>
+        <div class="dictionary">
+            <div class="item">DP: Desejo Proibido</div>
+            <div class="item">BF: Bela Forma</div>
+            <div class="item">BL: Bela Lumi</div>
+            <div class="item">BH: BelaBloom Hair (NOVO!)</div>
+            <div class="item">SS: SekaShot (NOVO!)</div>
+            <div class="item">ME: Mounjalis (NOVO!)</div>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-title">2. VARIAÇÕES DE PRODUTO (GTS ou CPS)</div>
+        <div class="dictionary">
+            <div class="item">GTS: Gotas (Frascos de vidro)</div>
+            <div class="item">CPS: Cápsulas (Potes plásticos)</div>
+        </div>
+        <p><i>⚠️ Se não houver sigla após a quantidade, o padrão é o produto principal da marca.</i></p>
+    </div>
+
+    <div class="section">
+        <div class="section-title">3. EXEMPLOS DE CONFERÊNCIA (PRÁTICA)</div>
+        <table>
+            <thead>
+                <tr>
+                    <th>Nomenclatura (Etiqueta)</th>
+                    <th>Como Separar na Caixa</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><b>DP - 2 UN GTS</b></td>
+                    <td>2 Frascos de Desejo Proibido em <b>GOTAS</b></td>
+                </tr>
+                <tr>
+                    <td><b>DP - 4 UN</b></td>
+                    <td>4 Frascos de Desejo Proibido (Variação Padrão)</td>
+                </tr>
+                <tr>
+                    <td><b>BL - 2 UN + 1 OB</b></td>
+                    <td>2 Frascos Bela Lumi + 1 <b>ITEM ADICIONAL</b> (Order Bump)</td>
+                </tr>
+                <tr>
+                    <td><b>BH - 3 UN</b></td>
+                    <td>3 Potes/Frascos de <b>BelaBloom Hair</b></td>
+                </tr>
+                <tr>
+                    <td><b>SS - 1 UN</b></td>
+                    <td>1 Unidade de <b>SekaShot</b></td>
+                </tr>
+                <tr>
+                    <td><b>DP - 1 UN GTS + 2 OB (CPS)</b></td>
+                    <td>1 Frasco Gotas + 2 Potes de <b>CÁPSULAS</b> extras</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="alert-box">
+        <strong>🚦 REGRA DE OURO PARA O SEPARADOR:</strong><br>
+        Viu um sinal de <b>MAIS (+)</b> no pedido? <span class="highlight">PARE E CONFIRA!</span><br>
+        Os sinais de + (OB, US, PV) significam que o cliente comprou itens extras de categorias diferentes dentro do mesmo pedido. Nunca feche a caixa antes de validar todos os itens da soma.
+    </div>
+
+    <div class="footer">
+        Gerado automaticamente pelo Sistema de Gestão de Pedidos GNV em 31/03/2026
+    </div>
+</body>
+</html>

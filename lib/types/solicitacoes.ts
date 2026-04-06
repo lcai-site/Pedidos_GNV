@@ -1,6 +1,6 @@
 // Tipos para o Sistema de Solicitações de Pós-Vendas
 
-export type TipoSolicitacao = 'reembolso' | 'mudanca_endereco' | 'mudanca_produto' | 'cancelamento';
+export type TipoSolicitacao = 'reembolso' | 'reclamacao' | 'cancelamento' | 'mudanca_produto' | 'mudanca_endereco'; // legados mantidos para compatibilidade com registros antigos
 
 export type StatusSolicitacao =
     | 'pendente'      // Aguardando análise
@@ -86,6 +86,12 @@ export interface Solicitacao {
     criado_por?: string;
     aprovado_por?: string;
 
+    // Reenvio (usado em Reclamações)
+    necessita_reenvio?: boolean;
+    pedido_reenvio_id?: string;       // ID do pedido original
+    responsavel_reenvio_id?: string;  // profile.id do responsável pelo reenvio
+    observacoes_reenvio?: string;
+
     created_at: string;
     updated_at: string;
     aprovado_em?: string;
@@ -104,6 +110,11 @@ export interface CriarSolicitacaoInput {
     dados_solicitacao: DadosSolicitacao;
     comprovantes?: string[];
     observacoes?: string;
+    // Reenvio opcional (Reclamações)
+    necessita_reenvio?: boolean;
+    pedido_reenvio_id?: string;
+    responsavel_reenvio_id?: string;
+    observacoes_reenvio?: string;
 }
 
 // Interface para atualização de solicitação
@@ -148,11 +159,13 @@ export const STATUS_COLORS: Record<StatusSolicitacao, string> = {
     cancelada: 'gray',
 };
 
-export const TIPO_LABELS: Record<TipoSolicitacao, string> = {
+export const TIPO_LABELS: Record<string, string> = {
     reembolso: 'Reembolso',
-    mudanca_endereco: 'Mudança de Endereço',
-    mudanca_produto: 'Mudança de Produto',
+    reclamacao: 'Reclamação',
     cancelamento: 'Cancelamento',
+    // Legados — mantidos para exibição de registros históricos anteriores
+    mudanca_produto: 'Reclamação',
+    mudanca_endereco: 'Mudança de Endereço',
 };
 
 export const PRIORIDADE_LABELS: Record<PrioridadeSolicitacao, string> = {

@@ -24,8 +24,7 @@ export function useExport() {
                 exportToCSV(orders);
             }
 
-            // Toast de sucesso (se tiver sistema de toast)
-            console.log(`✅ ${orders.length} pedidos exportados com sucesso!`);
+            // Export completed successfully
 
         } catch (error) {
             console.error('Erro ao exportar:', error);

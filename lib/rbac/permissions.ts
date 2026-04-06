@@ -7,6 +7,10 @@ export type Permission =
   | 'logistics:view'
   | 'logistics:edit'
   | 'logistics:generate_labels'
+  | 'logistics:reset_labels'
+  | 'logistics:mark_posted'
+  | 'logistics:sync'
+  | 'logistics:consolidate'
   | 'clientes:view'
   | 'clientes:edit'
   | 'pedidos:view'
@@ -27,7 +31,17 @@ export type Permission =
   | 'estoque:add'
   | 'estoque:adjust'
   | 'estoque:delete'
-  | 'estoque:config';
+  | 'estoque:config'
+  | 'crm:view'
+  | 'crm:edit'
+  | 'crm:config'
+  | 'assinaturas:view'
+  | 'assinaturas:edit'
+  | 'recuperacao:view'
+  | 'recuperacao:edit'
+  | 'ecommerce:view'
+  | 'ecommerce:edit'
+  | 'ecommerce:config';
 
 export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
   atendente: [
@@ -42,6 +56,8 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     'reembolsos:create',
     'settings:view',
     'estoque:view',
+    'crm:view',
+    'ecommerce:view',
   ],
   gestor: [
     'dashboard:view',
@@ -49,6 +65,9 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     'logistics:view',
     'logistics:edit',
     'logistics:generate_labels',
+    'logistics:reset_labels',
+    'logistics:mark_posted',
+    'logistics:consolidate',
     'clientes:view',
     'clientes:edit',
     'pedidos:view',
@@ -66,6 +85,14 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     'estoque:edit',
     'estoque:add',
     'estoque:adjust',
+    'crm:view',
+    'crm:edit',
+    'assinaturas:view',
+    'assinaturas:edit',
+    'recuperacao:view',
+    'recuperacao:edit',
+    'ecommerce:view',
+    'ecommerce:edit',
   ],
   adm: [
     'dashboard:view',
@@ -73,6 +100,10 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     'logistics:view',
     'logistics:edit',
     'logistics:generate_labels',
+    'logistics:reset_labels',
+    'logistics:mark_posted',
+    'logistics:sync',
+    'logistics:consolidate',
     'clientes:view',
     'clientes:edit',
     'pedidos:view',
@@ -93,6 +124,16 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     'estoque:adjust',
     'estoque:delete',
     'estoque:config',
+    'crm:view',
+    'crm:edit',
+    'crm:config',
+    'assinaturas:view',
+    'assinaturas:edit',
+    'recuperacao:view',
+    'recuperacao:edit',
+    'ecommerce:view',
+    'ecommerce:edit',
+    'ecommerce:config',
   ],
 };
 

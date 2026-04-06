@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useMemo, useCallback, ReactNode } from 'react';
 import { subDays, startOfDay, endOfDay } from 'date-fns';
 
 type PeriodType = '7d' | '15d' | '30d' | 'custom';
@@ -14,12 +14,11 @@ interface DateFilterContextType {
 const DateFilterContext = createContext<DateFilterContextType | undefined>(undefined);
 
 export const DateFilterProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  // Padrão: Últimos 7 dias
   const [period, setPeriodState] = useState<PeriodType>('7d');
   const [startDate, setStartDate] = useState<Date>(startOfDay(subDays(new Date(), 7)));
   const [endDate, setEndDate] = useState<Date>(endOfDay(new Date()));
 
-  const setPeriod = (newPeriod: PeriodType) => {
+  const setPeriod = useCallback((newPeriod: PeriodType) => {
     setPeriodState(newPeriod);
     const end = endOfDay(new Date());
     let start = startOfDay(new Date());
@@ -35,21 +34,28 @@ export const DateFilterProvider: React.FC<{ children: ReactNode }> = ({ children
         start = startOfDay(subDays(new Date(), 30));
         break;
       case 'custom':
-        // Mantém as datas atuais se mudar para custom, o usuário ajusta depois
-        return; 
+        return;
     }
     setStartDate(start);
     setEndDate(end);
-  };
+  }, []);
 
-  const setCustomRange = (start: Date, end: Date) => {
+  const setCustomRange = useCallback((start: Date, end: Date) => {
     setPeriodState('custom');
     setStartDate(startOfDay(start));
     setEndDate(endOfDay(end));
-  };
+  }, []);
+
+  const value = useMemo(() => ({
+    startDate,
+    endDate,
+    period,
+    setPeriod,
+    setCustomRange,
+  }), [startDate, endDate, period, setPeriod, setCustomRange]);
 
   return (
-    <DateFilterContext.Provider value={{ startDate, endDate, period, setPeriod, setCustomRange }}>
+    <DateFilterContext.Provider value={value}>
       {children}
     </DateFilterContext.Provider>
   );

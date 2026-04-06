@@ -26,11 +26,11 @@ export {
 // --- Utilitários ---
 export { getDeepVal, getDeepValues } from './utils/deepSearch';
 export { parseAddressString, formatAddress, formatGroupCodes } from './utils/addressParser';
-export { getSafeShipDate, isWithinPostSaleWindow } from './utils/dateRules';
+export { getSafeShipDate, isWithinPostSaleWindow, getPostSaleDate } from './utils/dateRules';
 export { exportToExcel, exportToCSV, prepareExportData } from './utils/exportUtils';
 
 // --- Serviços ---
-export { validateOrder, validateField, hasValidationErrors } from './services/orderValidationService';
+export { validateOrder, validateField, hasValidationErrors, getCpfWarning } from './services/orderValidationService';
 export { patchAddressInObject } from './services/addressPatchService';
 export { fetchOrders, updateTracking, clearTracking, updateOrderData } from './services/orderService';
 

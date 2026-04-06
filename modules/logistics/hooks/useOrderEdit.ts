@@ -4,6 +4,7 @@
 // Hook para gerenciar edição de pedidos
 
 import { useState } from 'react';
+import { toast } from 'sonner';
 import { PedidoUnificado, EditOrderForm, ValidationErrors } from '../types/logistics.types';
 import { getDeepVal, getDeepValues } from '../utils/deepSearch';
 import { parseAddressString, formatAddress } from '../utils/addressParser';
@@ -136,7 +137,7 @@ export const useOrderEdit = () => {
 
             if (Object.keys(errors).length > 0) {
                 setFieldErrors(errors);
-                alert('❌ Por favor, corrija os erros antes de salvar.');
+                toast.error('Por favor, corrija os erros antes de salvar.');
                 return;
             }
 
@@ -147,18 +148,18 @@ export const useOrderEdit = () => {
             const count = await updateOrderData(cpfOriginal, editForm);
 
             if (count > 0) {
-                alert('✅ Alterações salvas com sucesso!');
+                toast.success('Alterações salvas com sucesso!');
                 closeEditModal();
 
                 // Callback de sucesso (ex: recarregar lista)
                 if (onSuccess) onSuccess();
             } else {
-                alert('⚠️ Nenhum registro foi atualizado. Verifique os dados.');
+                toast.warning('Nenhum registro foi atualizado. Verifique os dados.');
             }
 
         } catch (error: any) {
             console.error("Erro CRÍTICO ao salvar:", error);
-            alert(`❌ Erro ao salvar no banco de dados:\n\n${error.message || JSON.stringify(error)}\n\nVerifique o console do navegador (F12) para mais detalhes.`);
+            toast.error(`Erro ao salvar no banco de dados:\n\n${error.message || JSON.stringify(error)}`);
         } finally {
             setSaving(false);
         }

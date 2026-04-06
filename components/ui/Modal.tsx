@@ -1,16 +1,29 @@
 import React, { useEffect, useRef } from 'react';
 import { X } from 'lucide-react';
+import { createPortal } from 'react-dom';
 
 interface ModalProps {
   isOpen: boolean;
   onClose: () => void;
   title: string;
   children: React.ReactNode;
-  size?: 'sm' | 'md' | 'lg' | 'xl'; // Tamanho opcional do modal
+  size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | '4xl' | '5xl' | 'full'; // Tamanho opcional do modal
 }
 
-export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }) => {
+export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, size = 'lg' }) => {
   const modalRef = useRef<HTMLDivElement>(null);
+  
+  const sizeClasses = {
+    sm: 'max-w-sm',
+    md: 'max-w-md',
+    lg: 'max-w-lg',
+    xl: 'max-w-xl',
+    '2xl': 'max-w-2xl',
+    '3xl': 'max-w-3xl',
+    '4xl': 'max-w-4xl',
+    '5xl': 'max-w-5xl',
+    full: 'max-w-[95vw]'
+  };
 
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
@@ -30,18 +43,18 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }
 
   if (!isOpen) return null;
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6">
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity"
+        className="fixed inset-0 bg-black/70 backdrop-blur-md transition-opacity"
         onClick={onClose}
       />
 
       {/* Modal Content */}
       <div
         ref={modalRef}
-        className="relative w-full max-w-lg transform rounded-xl bg-surface border border-border shadow-2xl transition-all flex flex-col max-h-[90vh]"
+        className={`relative w-full ${sizeClasses[size]} transform rounded-xl bg-surface border border-border shadow-2xl transition-all flex flex-col max-h-[90vh]`}
       >
         <div className="flex items-center justify-between px-6 py-4 border-b border-border">
           <h3 className="text-lg font-semibold text-slate-100">{title}</h3>
@@ -57,6 +70,7 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }
           {children}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

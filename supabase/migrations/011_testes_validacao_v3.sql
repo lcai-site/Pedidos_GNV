@@ -132,14 +132,14 @@ ORDER BY produto_principal;
 WITH pedido_v2 AS (
   SELECT 
     'v2' as versao,
-    *
+    id, codigo_transacao, status, nome_cliente, cpf_cliente, valor_total, data_venda
   FROM pedidos_consolidados_v2
   WHERE codigo_transacao = 'CODIGO_EXEMPLO'
 ),
 pedido_v3 AS (
   SELECT 
     'v3' as versao,
-    *
+    id, codigo_transacao, status_aprovacao as status, nome_cliente, cpf as cpf_cliente, valor_total, data_venda
   FROM pedidos_consolidados_v3
   WHERE codigo_transacao = 'CODIGO_EXEMPLO'
 )

@@ -38,111 +38,120 @@ export const SimpleLabelProgressModal: React.FC<SimpleLabelProgressModalProps> =
 
     const progresso = total > 0 ? Math.round((processados / total) * 100) : 0;
 
+    if (!isOpen) return null;
+
     return (
-        <Modal isOpen={isOpen} onClose={concluido ? onClose : () => { }} title={`Gerando Etiquetas - ${produtoNome}`}>
-            <div className="space-y-6">
-                {/* Barra de Progresso */}
-                <div className="space-y-2">
-                    <div className="flex justify-between text-sm text-gray-600">
-                        <span>Progresso</span>
-                        <span>{processados} / {total}</span>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
-                        <div
-                            className="bg-blue-600 h-full transition-all duration-300 ease-out"
-                            style={{ width: `${progresso}%` }}
-                        />
-                    </div>
-                    <div className="text-center text-2xl font-bold text-gray-800">
-                        {progresso}%
-                    </div>
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-[#020617]/80 backdrop-blur-sm p-4">
+            <div className="bg-[#0f172a] border border-[#22d3ee]/50 shadow-[0_0_20px_rgba(34,211,238,0.1)] w-full max-w-lg">
+                <div className="px-6 py-4 border-b border-[#22d3ee]/30 flex items-center justify-between bg-[#22d3ee]/5">
+                    <h3 className="text-sm font-mono font-bold tracking-widest text-[#22d3ee] uppercase">
+                        :: GERANDO ETIQUETAS_ :: [{produtoNome}]
+                    </h3>
+                    {concluido && (
+                        <button onClick={onClose} className="text-slate-500 hover:text-red-500 transition-colors">
+                            <XCircle className="w-5 h-5" />
+                        </button>
+                    )}
                 </div>
 
-                {/* Estatísticas */}
-                <div className="grid grid-cols-3 gap-4">
-                    <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
-                        <CheckCircle2 className="w-6 h-6 text-green-600 mx-auto mb-2" />
-                        <div className="text-2xl font-bold text-green-700">{sucesso}</div>
-                        <div className="text-sm text-green-600">Sucesso</div>
+                <div className="p-6 space-y-6">
+                    {/* Barra de Progresso Terminal */}
+                    <div className="space-y-2">
+                        <div className="flex justify-between text-[10px] font-mono font-bold tracking-widest text-[#22d3ee] uppercase">
+                            <span>&gt; PROGRESSO_</span>
+                            <span>{processados}/{total} [{progresso}%]</span>
+                        </div>
+                        <div className="w-full bg-[#020617] border border-slate-700 h-2">
+                            <div
+                                className="bg-[#22d3ee] h-full shadow-[0_0_8px_#22d3ee] transition-all duration-300 ease-out"
+                                style={{ width: `${progresso}%` }}
+                            />
+                        </div>
                     </div>
 
-                    <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-center">
-                        <XCircle className="w-6 h-6 text-red-600 mx-auto mb-2" />
-                        <div className="text-2xl font-bold text-red-700">{erros}</div>
-                        <div className="text-sm text-red-600">Erros</div>
+                    {/* Estatísticas Neon */}
+                    <div className="grid grid-cols-3 gap-4">
+                        <div className="bg-[#a3e635]/5 border border-[#a3e635]/30 p-4 text-center">
+                            <CheckCircle2 className="w-5 h-5 text-[#a3e635] mx-auto mb-2" />
+                            <div className="text-xl font-mono font-black text-[#a3e635] shadow-[0_0_8px_rgba(163,230,53,0.3)]">{sucesso}</div>
+                            <div className="text-[9px] font-mono tracking-widest uppercase text-[#a3e635]/70 mt-1">SUCESSO</div>
+                        </div>
+
+                        <div className="bg-[#ef4444]/5 border border-[#ef4444]/30 p-4 text-center">
+                            <XCircle className="w-5 h-5 text-[#ef4444] mx-auto mb-2" />
+                            <div className="text-xl font-mono font-black text-[#ef4444] shadow-[0_0_8px_rgba(239,68,68,0.3)]">{erros}</div>
+                            <div className="text-[9px] font-mono tracking-widest uppercase text-[#ef4444]/70 mt-1">ERROS</div>
+                        </div>
+
+                        <div className="bg-[#22d3ee]/5 border border-[#22d3ee]/30 p-4 text-center">
+                            <Loader2 className={`w-5 h-5 text-[#22d3ee] mx-auto mb-2 ${!concluido ? 'animate-spin' : ''}`} />
+                            <div className="text-xl font-mono font-black text-[#22d3ee] shadow-[0_0_8px_rgba(34,211,238,0.3)]">{total}</div>
+                            <div className="text-[9px] font-mono tracking-widest uppercase text-[#22d3ee]/70 mt-1">TOTAL</div>
+                        </div>
                     </div>
 
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-center">
-                        <Loader2 className={`w-6 h-6 text-blue-600 mx-auto mb-2 ${!concluido ? 'animate-spin' : ''}`} />
-                        <div className="text-2xl font-bold text-blue-700">{total}</div>
-                        <div className="text-sm text-blue-600">Total</div>
-                    </div>
+                    {/* Status Console */}
+                    {!concluido && (
+                        <div className="space-y-3 pt-2">
+                            <div className="flex items-center justify-center gap-2 text-[#22d3ee] font-mono text-[10px] uppercase tracking-widest py-2 bg-[#22d3ee]/10 border border-[#22d3ee]/20">
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                                <span>SINCRONIZANDO NODES... AGUARDE</span>
+                            </div>
+                            {onCancel && (
+                                <button
+                                    onClick={onCancel}
+                                    className="w-full bg-transparent border border-[#ef4444] text-[#ef4444] hover:bg-[#ef4444] hover:text-[#020617] font-mono font-bold text-[10px] tracking-widest uppercase py-3 transition-colors flex items-center justify-center gap-2"
+                                >
+                                    <AlertCircle className="w-4 h-4" /> ABORTAR SEQUÊNCIA
+                                </button>
+                            )}
+                        </div>
+                    )}
+
+                    {concluido && (
+                        <div className="flex items-center justify-center gap-2 text-[#a3e635] font-mono text-[10px] uppercase tracking-widest py-2 bg-[#a3e635]/10 border border-[#a3e635]/20">
+                            <CheckCircle2 className="w-4 h-4" />
+                            <span>OPERAÇÃO FINALIZADA_ COM SUCESSO</span>
+                        </div>
+                    )}
+
+                    {/* Error Logs */}
+                    {erros > 0 && (
+                        <div className="mt-4 border-t border-slate-800 pt-4">
+                            <div className="flex items-center gap-2 mb-3">
+                                <AlertCircle className="w-4 h-4 text-[#ef4444]" />
+                                <h4 className="font-mono text-[10px] uppercase tracking-widest text-[#ef4444] font-bold">:: LOGS_DE_FALHA</h4>
+                            </div>
+                            <div className="max-h-48 overflow-y-auto space-y-2 pr-2 custom-scrollbar-dark">
+                                {detalhes
+                                    .filter(d => d.status === 'erro')
+                                    .map((detalhe, idx) => (
+                                        <div key={idx} className="bg-[#ef4444]/5 border-l-2 border-[#ef4444] p-3 text-sm flex flex-col gap-1">
+                                            <div className="font-mono font-bold text-[#ef4444] text-xs uppercase tracking-tight">{detalhe.nome}</div>
+                                            <div className="font-mono text-[#ef4444]/80 text-[10px] tracking-widest">ID: {detalhe.cpf}</div>
+                                            <div className="text-slate-400 text-[10px] mt-1 font-mono break-words leading-relaxed">{detalhe.mensagem}</div>
+                                            {detalhe.sugestao_ia && (
+                                                <div className="mt-2 text-[10px] font-mono text-[#fb923c] bg-[#fb923c]/5 p-2 border border-[#fb923c]/20">
+                                                    <strong className="tracking-widest uppercase mb-1 block">:: IA_SUGERE:</strong> {detalhe.sugestao_ia}
+                                                </div>
+                                            )}
+                                        </div>
+                                    ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Botão Fechar Terminal */}
+                    {concluido && (
+                        <button
+                            onClick={onClose}
+                            className="w-full bg-[#22d3ee] text-[#020617] font-mono font-bold text-[10px] uppercase tracking-widest py-3 hover:bg-cyan-300 transition-colors mt-4"
+                        >
+                            FECHAR TERMINAL
+                        </button>
+                    )}
                 </div>
-
-                {/* Status */}
-                {!concluido && (
-                    <div className="space-y-3">
-                        <div className="flex items-center justify-center gap-2 text-blue-600">
-                            <Loader2 className="w-5 h-5 animate-spin" />
-                            <span>Processando etiquetas...</span>
-                        </div>
-                        {onCancel && (
-                            <button
-                                onClick={onCancel}
-                                className="w-full bg-red-500 hover:bg-red-600 text-white font-semibold py-3 px-6 rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl animate-pulse"
-                                style={{
-                                    animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite'
-                                }}
-                            >
-                                ⏸️ Cancelar Geração
-                            </button>
-                        )}
-                    </div>
-                )}
-
-                {concluido && (
-                    <div className="flex items-center justify-center gap-2 text-green-600">
-                        <CheckCircle2 className="w-5 h-5" />
-                        <span>Processamento concluído!</span>
-                    </div>
-                )}
-
-                {/* Detalhes de Erros */}
-                {erros > 0 && (
-                    <div className="mt-4">
-                        <div className="flex items-center gap-2 mb-2">
-                            <AlertCircle className="w-5 h-5 text-orange-600" />
-                            <h4 className="font-semibold text-gray-800">Pedidos com Erro:</h4>
-                        </div>
-                        <div className="max-h-48 overflow-y-auto space-y-2">
-                            {detalhes
-                                .filter(d => d.status === 'erro')
-                                .map((detalhe, idx) => (
-                                    <div key={idx} className="bg-red-50 border border-red-200 rounded p-3 text-sm">
-                                        <div className="font-medium text-red-900">{detalhe.nome}</div>
-                                        <div className="text-red-700">CPF: {detalhe.cpf}</div>
-                                        <div className="text-red-600 text-xs mt-1">{detalhe.mensagem}</div>
-                                        {detalhe.sugestao_ia && (
-                                            <div className="mt-2 text-xs text-orange-700 bg-orange-50 p-2 rounded border border-orange-200">
-                                                <strong>IA:</strong> {detalhe.sugestao_ia}
-                                            </div>
-                                        )}
-                                    </div>
-                                ))}
-                        </div>
-                    </div>
-                )}
-
-                {/* Botão Fechar */}
-                {concluido && (
-                    <button
-                        onClick={onClose}
-                        className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors"
-                    >
-                        Fechar
-                    </button>
-                )}
             </div>
-        </Modal>
+        </div>
     );
 };

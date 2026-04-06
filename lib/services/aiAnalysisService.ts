@@ -1,5 +1,6 @@
 // Serviço para análise de erros via IA (Open Router)
 
+import { logger } from '../utils/logger';
 import type { ErroEtiqueta } from '../types/labels';
 
 // Usar proxy local para evitar CORS
@@ -13,17 +14,29 @@ class AIAnalysisService {
      */
     async analisarErro(erro: ErroEtiqueta): Promise<string> {
         try {
-            const prompt = `Você é um especialista em logística e endereços brasileiros.
+            const prompt = `Você é um especialista sênior em logística brasileira e APIs de frete (Correios/Melhor Envio).
+Sua missão é diagnosticar erros de geração de etiquetas e propor a solução EXATA.
 
-Analise o seguinte erro ao gerar etiqueta de envio:
+CONHECIMENTOS TÉCNICOS:
+- CEP: Deve ter EXATAMENTE 8 dígitos numéricos.
+- Rua/Logradouro: Máximo 50 caracteres.
+- Nome Cliente: Máximo 50 caracteres.
+- Complemento: Máximo 30 caracteres.
+- Bairro: Máximo 50 caracteres.
+- CPF: Deve ser válido e conter apenas números ou padrão 000.000.000-00.
+- Telefone: 10 ou 11 dígitos.
 
-**Cliente:** ${erro.nome}
-**CPF:** ${erro.cpf}
-**Endereço:** ${erro.endereco}
-**Erro:** ${erro.erro}
+DADOS PARA ANÁLISE:
+- Cliente: ${erro.nome}
+- CPF: ${erro.cpf}
+- Endereço Atual: ${erro.endereco}
+- Código de Erro da API: ${erro.erro}
 
-Identifique o problema e sugira uma correção específica e objetiva.
-Responda em português, de forma concisa (máximo 2 linhas).`;
+INSTRUÇÕES DE RESPOSTA:
+1. Identifique se o erro é no Endereço (CEP inválido, rua longa, complemento longo), no Cliente (CPF/Nome) ou na API (Timeout/Auth).
+2. Seja certeiro. Não use termos vagos como "verifique". Diga "O CEP tem 7 dígitos" ou "A rua excede 50 caracteres".
+3. Formato OBRIGATÓRIO: "Causa: [problema detectado] | Solução: [ação exata para corrigir]".
+4. Responda em português, de forma concisa (máximo 2 linhas).`;
 
             const response = await fetch(OPEN_ROUTER_API_URL, {
                 method: 'POST',
@@ -56,7 +69,10 @@ Responda em português, de forma concisa (máximo 2 linhas).`;
             return sugestao.trim();
 
         } catch (error) {
-            console.error('Erro ao analisar com IA:', error);
+            logger.apiError('AIAnalysisService', 'analisarErro', error, {
+                cliente: erro.nome,
+                cpf: erro.cpf
+            });
             return 'Erro ao analisar. Verifique o endereço manualmente.';
         }
     }

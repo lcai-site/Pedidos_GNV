@@ -6,6 +6,7 @@
 import React from 'react';
 import { User, Phone, Mail, FileText } from 'lucide-react';
 import { EditOrderForm, ValidationErrors } from '../../types/logistics.types';
+import { getCpfWarning } from '../../services/orderValidationService';
 
 interface ContactFormProps {
     form: EditOrderForm;
@@ -16,32 +17,31 @@ interface ContactFormProps {
 export const ContactForm: React.FC<ContactFormProps> = ({ form, errors, onChange }) => {
     return (
         <div className="space-y-4">
-            <div className="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300 mb-3">
-                <User className="w-4 h-4" />
-                Dados do Cliente
+            <div className="flex items-center gap-2 text-[10px] font-mono font-bold tracking-widest uppercase text-[#22d3ee] mb-3 bg-[#22d3ee]/10 p-2 border border-[#22d3ee]/20">
+                <User className="w-3.5 h-3.5" />
+                DADOS DO CLIENTE
             </div>
 
-            {/* Nome */}
             <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                    Nome Completo *
+                <label className="block text-[10px] font-mono font-bold tracking-widest text-slate-500 uppercase mb-1">
+                    NOME COMPLETO *
                 </label>
                 <input
                     type="text"
                     value={form.nome}
                     onChange={(e) => onChange('nome', e.target.value)}
-                    placeholder="João da Silva"
-                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white ${errors.nome ? 'border-red-500' : 'border-slate-300'
+                    placeholder="Ex: Maria da Silva"
+                    className={`w-full px-3 py-2 bg-[#020617] border text-xs font-mono font-bold uppercase tracking-widest text-slate-200 focus:outline-none focus:border-[#a3e635] focus:ring-1 focus:ring-[#a3e635] rounded-none transition-colors ${errors.nome ? 'border-[#ef4444] shadow-[inset_0_0_8px_rgba(239,68,68,0.2)]' : 'border-slate-800'
                         }`}
                 />
                 {errors.nome && (
-                    <p className="text-xs text-red-500 mt-1">{errors.nome}</p>
+                    <p className="text-[9px] font-mono text-[#ef4444] uppercase tracking-widest mt-1 bg-[#ef4444]/10 p-1">:: {errors.nome}</p>
                 )}
             </div>
 
             {/* CPF */}
             <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                <label className="block text-[10px] font-mono font-bold tracking-widest text-slate-500 uppercase mb-1">
                     CPF *
                 </label>
                 <input
@@ -50,56 +50,47 @@ export const ContactForm: React.FC<ContactFormProps> = ({ form, errors, onChange
                     onChange={(e) => onChange('cpf', e.target.value)}
                     placeholder="000.000.000-00"
                     maxLength={14}
-                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white ${errors.cpf ? 'border-red-500' : 'border-slate-300'
+                    className={`w-full px-3 py-2 bg-[#020617] border text-xs font-mono font-bold uppercase tracking-widest text-slate-200 focus:outline-none focus:border-[#a3e635] focus:ring-1 focus:ring-[#a3e635] rounded-none transition-colors ${getCpfWarning(form.cpf) ? 'border-[#fb923c] shadow-[inset_0_0_8px_rgba(251,146,60,0.2)]' : 'border-slate-800'
                         }`}
                 />
-                {errors.cpf && (
-                    <p className="text-xs text-red-500 mt-1">{errors.cpf}</p>
+                {getCpfWarning(form.cpf) && (
+                    <p className="text-[9px] font-mono uppercase tracking-widest text-[#fb923c] mt-1 bg-[#fb923c]/10 p-1">:: {getCpfWarning(form.cpf)}</p>
                 )}
             </div>
 
             {/* Telefone */}
             <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1 flex items-center gap-1">
-                    <Phone className="w-3 h-3" />
-                    Telefone
-                </label>
+                    TELEFONE
                 <input
                     type="text"
                     value={form.telefone}
                     onChange={(e) => onChange('telefone', e.target.value)}
-                    placeholder="(11) 99999-9999"
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white"
+                    placeholder="(00) 00000-0000"
+                    className="w-full px-3 py-2 bg-[#020617] border border-slate-800 text-xs font-mono font-bold uppercase tracking-widest text-slate-200 focus:outline-none focus:border-[#a3e635] focus:ring-1 focus:ring-[#a3e635] rounded-none transition-colors"
                 />
             </div>
 
             {/* Email */}
             <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1 flex items-center gap-1">
-                    <Mail className="w-3 h-3" />
-                    Email
-                </label>
+                    E-MAIL
                 <input
                     type="email"
                     value={form.email}
                     onChange={(e) => onChange('email', e.target.value)}
-                    placeholder="cliente@email.com"
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white"
+                    placeholder="exemplo@email.com"
+                    className="w-full px-3 py-2 bg-[#020617] border border-slate-800 text-xs font-mono font-bold uppercase tracking-widest text-slate-200 focus:outline-none focus:border-[#a3e635] focus:ring-1 focus:ring-[#a3e635] rounded-none transition-colors"
                 />
             </div>
 
             {/* Observação */}
             <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1 flex items-center gap-1">
-                    <FileText className="w-3 h-3" />
-                    Observação
-                </label>
+                    OBSERVAÇÕES DO PEDIDO
                 <textarea
                     value={form.observacao}
                     onChange={(e) => onChange('observacao', e.target.value)}
-                    placeholder="Observações sobre o pedido..."
+                    placeholder="Insira notas ou observações adicionais..."
                     rows={3}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white resize-none"
+                    className="w-full px-3 py-2 bg-[#020617] border border-slate-800 text-xs font-mono font-bold tracking-widest uppercase text-slate-200 focus:outline-none focus:border-[#a3e635] focus:ring-1 focus:ring-[#a3e635] rounded-none transition-colors resize-none"
                 />
             </div>
         </div>

@@ -133,12 +133,12 @@ export const SolicitacoesPage: React.FC = () => {
             {loading ? (
                 <div className="text-center py-12">
                     <div className="inline-block w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
-                    <p className="text-slate-500 mt-4">Carregando solicitações...</p>
+                    <p className="text-slate-500 dark:text-slate-400 mt-4">Carregando solicitações...</p>
                 </div>
             ) : solicitacoesFiltradas.length === 0 ? (
                 <div className="text-center py-12 bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700">
                     <FileText className="w-12 h-12 text-slate-400 mx-auto mb-4" />
-                    <p className="text-slate-500">Nenhuma solicitação encontrada</p>
+                    <p className="text-slate-500 dark:text-slate-400">Nenhuma solicitação encontrada</p>
                 </div>
             ) : (
                 <div className="space-y-3">
@@ -166,12 +166,12 @@ export const SolicitacoesPage: React.FC = () => {
                                         {solicitacao.cliente_nome}
                                     </p>
                                     {solicitacao.observacoes && (
-                                        <p className="text-slate-500 text-sm mt-1 line-clamp-1">
+                                        <p className="text-slate-500 dark:text-slate-400 text-sm mt-1 line-clamp-1">
                                             {solicitacao.observacoes}
                                         </p>
                                     )}
                                 </div>
-                                <div className="text-right text-sm text-slate-500">
+                                <div className="text-right text-sm text-slate-500 dark:text-slate-400">
                                     {new Date(solicitacao.created_at).toLocaleDateString('pt-BR')}
                                 </div>
                             </div>
