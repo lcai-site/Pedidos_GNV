@@ -13,7 +13,8 @@ import {
   Mail,
   AlertCircle,
   X,
-  Shield
+  Shield,
+  Trash2
 } from 'lucide-react';
 import { 
   useUsuarios, 
@@ -21,6 +22,7 @@ import {
   useUpdateUsuario, 
   useToggleUsuarioStatus,
   useReenviarConvite,
+  useDeleteUsuario,
   type Usuario 
 } from '../../lib/hooks/useUsuarios';
 import { PermissionsModal } from '../../components/Usuarios/PermissionsModal';
@@ -63,6 +65,7 @@ export const UsuariosPage: React.FC = () => {
   const updateUsuario = useUpdateUsuario();
   const toggleStatus = useToggleUsuarioStatus();
   const reenviarConvite = useReenviarConvite();
+  const deleteUsuario = useDeleteUsuario();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [filterRole, setFilterRole] = useState<string>('all');
@@ -167,6 +170,12 @@ export const UsuariosPage: React.FC = () => {
   const handleReenviarConvite = async (email: string, role?: string) => {
     if (confirm(`Reenviar convite de acesso para ${email}?`)) {
       await reenviarConvite.mutateAsync(email);
+    }
+  };
+
+  const handleDeleteUsuario = async (usuario: Usuario) => {
+    if (confirm(`Tem certeza que deseja excluir DEFINITIVAMENTE o usuário ${usuario.nome_completo || usuario.email}? Esta ação excluirá a conta e não pode ser desfeita.`)) {
+      await deleteUsuario.mutateAsync(usuario.id);
     }
   };
 
@@ -355,17 +364,28 @@ export const UsuariosPage: React.FC = () => {
                             </button>
 
                             {!isCurrentUser && (
-                              <button
-                                onClick={() => handleToggleStatus(usuario)}
-                                className={`p-2 rounded-lg ${
-                                  usuario.ativo 
-                                    ? 'text-emerald-400 hover:bg-emerald-500/20' 
-                                    : 'text-rose-400 hover:bg-rose-500/20'
-                                }`}
-                                title={usuario.ativo ? 'Desativar' : 'Ativar'}
-                              >
-                                {usuario.ativo ? <Power className="w-4 h-4" /> : <PowerOff className="w-4 h-4" />}
-                              </button>
+                              <>
+                                <button
+                                  onClick={() => handleToggleStatus(usuario)}
+                                  className={`p-2 rounded-lg ${
+                                    usuario.ativo 
+                                      ? 'text-emerald-400 hover:bg-emerald-500/20' 
+                                      : 'text-rose-400 hover:bg-rose-500/20'
+                                  }`}
+                                  title={usuario.ativo ? 'Desativar' : 'Ativar'}
+                                >
+                                  {usuario.ativo ? <Power className="w-4 h-4" /> : <PowerOff className="w-4 h-4" />}
+                                </button>
+                                {profile?.role === 'adm' && (
+                                  <button
+                                    onClick={() => handleDeleteUsuario(usuario)}
+                                    className="p-2 text-rose-400 hover:bg-rose-500/20 rounded-lg ml-1"
+                                    title="Excluir Definitivamente"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
+                                )}
+                              </>
                             )}
                           </>
                         )}

@@ -87,57 +87,29 @@ export function useCreateUsuario() {
 
   return useMutation({
     mutationFn: async (dto: CreateUsuarioDTO) => {
-      // Gerar senha temporária aleatória
-      const tempPassword = Math.random().toString(36).slice(-12) + Math.random().toString(36).slice(-12);
-
-      // 1. Criar usuário no Auth com senha temporária
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: dto.email,
-        password: tempPassword,
-        options: {
+      // 1. Invocar a Edge Function admin-users para enviar o convite REAL
+      const { data, error } = await supabase.functions.invoke('admin-users', {
+        body: {
+          action: 'invite',
+          email: dto.email,
           data: {
             nome_completo: dto.nome_completo,
             role: dto.role,
+            vendedora_nome: dto.vendedora_nome || null,
+            meta_mensal: dto.meta_mensal || null,
           }
         }
       });
 
-      if (authError) throw authError;
-      if (!authData.user) throw new Error('Erro ao criar usuário');
+      if (error) throw error;
+      if (!data.ok) throw new Error(data.error || 'Erro ao criar usuário via convite');
 
-      // 2. Atualizar o profile criado automaticamente com os dados
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .update({
-          nome_completo: dto.nome_completo,
-          role: dto.role,
-          vendedora_nome: dto.vendedora_nome || null,
-          meta_mensal: dto.meta_mensal || null,
-          ativo: true
-        })
-        .eq('id', authData.user.id);
-
-      if (profileError) throw profileError;
-
-      // 3. Enviar email de redefinição de senha (convite)
-      const { error: resetError } = await supabase.auth.resetPasswordForEmail(dto.email, {
-        redirectTo: `${window.location.origin}/#/login`,
-      });
-
-      if (resetError) {
-        logger.warn('Email de convite não enviado', {
-          hook: 'useCreateUsuario',
-          email: dto.email,
-          message: resetError.message
-        });
-      }
-
-      return { user: authData.user, role: dto.role };
+      return { user: data.user, role: dto.role };
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['usuarios'] });
       const roleLabel = data.role === 'adm' ? 'Administrador' : data.role === 'gestor' ? 'Gestor' : 'Atendente';
-      toast.success(`Convite enviado! ${roleLabel} criado com sucesso.`);
+      toast.success(`Convite enviado por email! ${roleLabel} criado com sucesso.`);
     },
     onError: (error: any) => {
       toast.error('Erro ao criar usuário: ' + error.message);
@@ -235,6 +207,25 @@ export function useResetPassword() {
     },
     onError: (error: any) => {
       toast.error('Erro: ' + error.message);
+    }
+  });
+}
+
+// Hook para excluir um usuário completamente do auth.users (necessita da RPC excluir_usuario)
+export function useDeleteUsuario() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.rpc('excluir_usuario', { p_user_id: id });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['usuarios'] });
+      toast.success('Usuário excluído definitivamente!');
+    },
+    onError: (error: any) => {
+      toast.error('Erro ao excluir usuário: ' + error.message);
     }
   });
 }
