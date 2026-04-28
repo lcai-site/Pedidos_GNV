@@ -2,6 +2,7 @@ import React, { Suspense, lazy } from 'react';
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Layout } from './components/Layout';
 import { LoginPage } from './pages/LoginPage';
+import { SetPasswordPage } from './pages/SetPasswordPage';
 import { DateFilterProvider } from './context/DateFilterContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { AuthProvider, useAuth } from './lib/contexts/AuthContext';
@@ -129,11 +130,20 @@ const SuspensePage: React.FC<{ children: React.ReactNode }> = ({ children }) => 
 );
 
 function App() {
+  const searchParams = new URLSearchParams(window.location.search);
+  const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+  const isSetPasswordFlow =
+    searchParams.get('auth_flow') === 'set-password' ||
+    hashParams.get('auth_flow') === 'set-password';
+
   return (
     <ThemeProvider>
       <AuthProvider>
         <NotificationProvider>
           <DateFilterProvider>
+            {isSetPasswordFlow ? (
+              <SetPasswordPage />
+            ) : (
             <HashRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
               <Routes>
                 {/* Rota Pública */}
@@ -196,6 +206,7 @@ function App() {
                 </Route>
               </Routes>
             </HashRouter>
+            )}
           </DateFilterProvider>
         </NotificationProvider>
       </AuthProvider>

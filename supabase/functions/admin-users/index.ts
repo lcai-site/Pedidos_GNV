@@ -17,6 +17,25 @@ function normalizeEmail(email: unknown) {
   return typeof email === "string" ? email.trim().toLowerCase() : "";
 }
 
+function getPublicAppUrl(req: Request) {
+  const configuredUrl =
+    Deno.env.get("APP_URL") ||
+    Deno.env.get("PUBLIC_SITE_URL") ||
+    Deno.env.get("SITE_URL") ||
+    "";
+
+  if (configuredUrl) {
+    return configuredUrl.replace(/\/$/, "");
+  }
+
+  const origin = req.headers.get("Origin") || "";
+  if (origin && !origin.includes("localhost") && !origin.includes("127.0.0.1")) {
+    return origin.replace(/\/$/, "");
+  }
+
+  return "https://pedidos-gnv.app";
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -79,10 +98,10 @@ Deno.serve(async (req) => {
         return jsonResponse({ error: "Apenas administradores podem criar outros administradores.", ok: false });
       }
 
-      const origin = req.headers.get("Origin") || undefined;
+      const redirectTo = `${getPublicAppUrl(req)}/?auth_flow=set-password`;
       const { data: inviteData, error: inviteError } = await adminClient.auth.admin.inviteUserByEmail(email, {
         data,
-        redirectTo: origin,
+        redirectTo,
       });
 
       if (inviteError) {
