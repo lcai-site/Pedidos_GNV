@@ -66,32 +66,6 @@ export const LoginPage: React.FC = () => {
         setEmail('');
         setPassword('');
         setNomeCompleto('');
-        return;
-
-        if (data.ok) {
-          // Aguarda o trigger criar o perfil base, depois atualiza o nome
-          await new Promise(resolve => setTimeout(resolve, 1500));
-
-          await supabase
-            .from('profiles')
-            .upsert({
-              id: crypto.randomUUID(),
-              email,
-              nome_completo: nomeCompleto,
-              role: 'atendente',
-              ativo: false, // Aguarda aprovação do ADM
-              created_at: new Date().toISOString(),
-            }, { onConflict: 'id' });
-
-          // Sign out imediato — não pode entrar sem aprovação
-          await supabase.auth.signOut();
-
-          setSuccess("Solicitação enviada! Aguarde a aprovação do administrador para acessar o sistema.");
-          setIsSignUp(false);
-          setEmail('');
-          setPassword('');
-          setNomeCompleto('');
-        }
 
       } else {
         // --- FLUXO DE LOGIN ---

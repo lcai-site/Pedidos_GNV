@@ -122,7 +122,7 @@ class EstoqueService {
      */
     private async executeSyncItem(item: SyncItem) {
         switch (item.type) {
-            case 'create':
+            case 'create': {
                 const { codigo, nome, quantidade, limiteAlerta } = item.payload;
                 const { error: createError } = await supabase.rpc('inserir_produto', {
                     p_codigo: codigo,
@@ -132,8 +132,9 @@ class EstoqueService {
                 });
                 if (createError) throw createError;
                 break;
+            }
 
-            case 'update':
+            case 'update': {
                 const { id: updateId, novaQuantidade, usuarioId, motivo } = item.payload;
 
                 // IMPORTANTE: IDs "mock-" não existem no banco. Se tentarmos update neles, precisamos criar primeiro?
@@ -164,8 +165,9 @@ class EstoqueService {
                 // Nota: se o item falhar, a movimentação não ocorre.
                 // Mas aqui já passou do update.
                 break;
+            }
 
-            case 'delete':
+            case 'delete': {
                 const { id: deleteId } = item.payload;
                 if (String(deleteId).startsWith('mock-')) return;
 
@@ -175,6 +177,7 @@ class EstoqueService {
                     .eq('id', deleteId);
                 if (delError) throw delError;
                 break;
+            }
         }
     }
 

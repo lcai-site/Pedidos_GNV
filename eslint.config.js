@@ -4,10 +4,26 @@ import tsParser from '@typescript-eslint/parser';
 import prettier from 'eslint-config-prettier';
 
 export default [
-    js.configs.recommended,
     {
-        ignores: ['node_modules/**', 'dist/**', '*.config.js', '*.config.mjs'],
+        ignores: [
+            'node_modules/**',
+            'dist/**',
+            'coverage/**',
+            '.agent/**',
+            'tmp/**',
+            'scripts/**',
+            'supabase/scripts/**',
+            '*.config.js',
+            '*.config.mjs',
+            '*.timestamp-*.mjs',
+            'tmp_*.ts',
+            'tmp_*.js',
+            'tmp_*.mjs',
+            'test_*.js',
+            'test_*.mjs',
+        ],
     },
+    js.configs.recommended,
     {
         files: ['**/*.{ts,tsx}'],
         languageOptions: {

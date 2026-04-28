@@ -214,7 +214,6 @@ export const Recovery: React.FC = () => {
 
   useEffect(() => {
     fetchData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [startDate, endDate, page, statusFilter]);
 
   // Debounce na busca
@@ -224,7 +223,6 @@ export const Recovery: React.FC = () => {
       else fetchData();
     }, 500);
     return () => clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchTerm]);
 
   const copyToClipboard = (text: string, label: string) => {
