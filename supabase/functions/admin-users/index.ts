@@ -42,14 +42,78 @@ Deno.serve(async (req) => {
   }
 
   try {
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const adminClient = createClient(supabaseUrl, supabaseServiceKey);
+
+    const body = await req.json().catch(() => null);
+    if (!body || !body.action) {
+      return jsonResponse({ error: "Acao nao especificada", ok: false });
+    }
+
+    if (body.action === "request_access") {
+      const email = normalizeEmail(body.email);
+      const nomeCompleto = typeof body.nome_completo === "string" ? body.nome_completo.trim() : "";
+      const password = typeof body.password === "string" ? body.password : "";
+
+      if (!nomeCompleto) {
+        return jsonResponse({ error: "Nome completo e obrigatorio.", ok: false });
+      }
+
+      if (!email) {
+        return jsonResponse({ error: "Email invalido.", ok: false });
+      }
+
+      if (password.length < 6) {
+        return jsonResponse({ error: "A senha precisa ter pelo menos 6 caracteres.", ok: false });
+      }
+
+      const { data: createData, error: createError } = await adminClient.auth.admin.createUser({
+        email,
+        password,
+        email_confirm: true,
+        user_metadata: {
+          nome_completo: nomeCompleto,
+          role: "atendente",
+          requested_access: true,
+        },
+      });
+
+      if (createError) {
+        if (createError.message.includes("already") || createError.status === 422) {
+          return jsonResponse({ error: "Este email ja possui cadastro ou solicitacao pendente.", ok: false });
+        }
+
+        return jsonResponse({ error: createError.message, ok: false });
+      }
+
+      if (!createData.user) {
+        return jsonResponse({ error: "Nao foi possivel criar a solicitacao.", ok: false });
+      }
+
+      const { error: profileError } = await adminClient.from("profiles").upsert({
+        id: createData.user.id,
+        email,
+        nome_completo: nomeCompleto,
+        role: "atendente",
+        ativo: false,
+        vendedora_nome: null,
+        meta_mensal: null,
+      });
+
+      if (profileError) {
+        await adminClient.auth.admin.deleteUser(createData.user.id);
+        return jsonResponse({ error: profileError.message, ok: false });
+      }
+
+      return jsonResponse({ ok: true });
+    }
+
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
       return jsonResponse({ error: "Nao autenticado", ok: false });
     }
-
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
-    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
     const jwt = authHeader.replace("Bearer ", "");
     const client = createClient(supabaseUrl, supabaseAnonKey, {
@@ -70,13 +134,6 @@ Deno.serve(async (req) => {
     if (!profile || !profile.ativo || (profile.role !== "adm" && profile.role !== "gestor")) {
       return jsonResponse({ error: "Apenas administradores e gestores podem gerenciar usuarios.", ok: false });
     }
-
-    const body = await req.json().catch(() => null);
-    if (!body || !body.action) {
-      return jsonResponse({ error: "Acao nao especificada", ok: false });
-    }
-
-    const adminClient = createClient(supabaseUrl, supabaseServiceKey);
 
     if (body.action === "invite") {
       const email = normalizeEmail(body.email);

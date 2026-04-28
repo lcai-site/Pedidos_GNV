@@ -48,22 +48,35 @@ export const LoginPage: React.FC = () => {
         // --- FLUXO DE SOLICITAÇÃO DE ACESSO ---
         // Cria o usuário no Auth mas com ativo=FALSE no perfil.
         // ADM precisa aprovar em Usuários > Ativar antes de poder entrar.
-        const { data, error } = await supabase.auth.signUp({
-          email,
-          password,
+        const { data, error } = await supabase.functions.invoke('admin-users', {
+          body: {
+            action: 'request_access',
+            nome_completo: nomeCompleto,
+            email,
+            password,
+          }
         });
 
         if (error) throw error;
+        if (!data?.ok) throw new Error(data?.error || 'Erro ao solicitar acesso.');
 
-        if (data.user) {
+        await supabase.auth.signOut();
+        setSuccess("Solicitação enviada! Aguarde a aprovação do administrador para acessar o sistema.");
+        setIsSignUp(false);
+        setEmail('');
+        setPassword('');
+        setNomeCompleto('');
+        return;
+
+        if (data.ok) {
           // Aguarda o trigger criar o perfil base, depois atualiza o nome
           await new Promise(resolve => setTimeout(resolve, 1500));
 
           await supabase
             .from('profiles')
             .upsert({
-              id: data.user.id,
-              email: data.user.email,
+              id: crypto.randomUUID(),
+              email,
               nome_completo: nomeCompleto,
               role: 'atendente',
               ativo: false, // Aguarda aprovação do ADM
