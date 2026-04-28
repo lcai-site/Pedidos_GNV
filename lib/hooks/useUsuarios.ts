@@ -171,17 +171,25 @@ export function useToggleUsuarioStatus() {
   });
 }
 
-// Hook para reenviar convite (redefinição de senha)
+// Hook para reenviar convite de criacao de senha
 export function useReenviarConvite() {
-  const queryClient = useQueryClient();
-
   return useMutation({
-    mutationFn: async (email: string) => {
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/#/login`
+    mutationFn: async (usuario: Pick<Usuario, 'email' | 'nome_completo' | 'role' | 'vendedora_nome' | 'meta_mensal'>) => {
+      const { data, error } = await supabase.functions.invoke('admin-users', {
+        body: {
+          action: 'invite',
+          email: usuario.email,
+          data: {
+            nome_completo: usuario.nome_completo || usuario.email,
+            role: usuario.role,
+            vendedora_nome: usuario.vendedora_nome || null,
+            meta_mensal: usuario.meta_mensal || null,
+          }
+        }
       });
 
       if (error) throw error;
+      if (!data?.ok) throw new Error(data?.error || 'Erro ao reenviar convite');
     },
     onSuccess: () => {
       toast.success('Convite reenviado! O usuário receberá um email para criar sua senha.');
@@ -211,14 +219,21 @@ export function useResetPassword() {
   });
 }
 
-// Hook para excluir um usuário completamente do auth.users (necessita da RPC excluir_usuario)
+// Hook para excluir um usuario completamente do Auth e de profiles
 export function useDeleteUsuario() {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.rpc('excluir_usuario', { p_user_id: id });
+      const { data, error } = await supabase.functions.invoke('admin-users', {
+        body: {
+          action: 'delete',
+          userId: id,
+        }
+      });
+
       if (error) throw error;
+      if (!data?.ok) throw new Error(data?.error || 'Erro ao excluir usuario');
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['usuarios'] });

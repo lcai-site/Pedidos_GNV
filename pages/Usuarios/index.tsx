@@ -167,9 +167,9 @@ export const UsuariosPage: React.FC = () => {
     await toggleStatus.mutateAsync({ id: usuario.id, ativo: !usuario.ativo });
   };
 
-  const handleReenviarConvite = async (email: string, role?: string) => {
-    if (confirm(`Reenviar convite de acesso para ${email}?`)) {
-      await reenviarConvite.mutateAsync(email);
+  const handleReenviarConvite = async (usuario: Usuario) => {
+    if (confirm(`Reenviar convite de acesso para ${usuario.email}?`)) {
+      await reenviarConvite.mutateAsync(usuario);
     }
   };
 
@@ -356,7 +356,7 @@ export const UsuariosPage: React.FC = () => {
                             </button>
 
                             <button
-                              onClick={() => handleReenviarConvite(usuario.email)}
+                              onClick={() => handleReenviarConvite(usuario)}
                               className="p-2 text-slate-400 hover:text-amber-400 rounded-lg hover:bg-amber-500/20"
                               title="Reenviar convite"
                             >
