@@ -37,6 +37,7 @@ export const SimpleLabelProgressModal: React.FC<SimpleLabelProgressModalProps> =
     }[produto];
 
     const progresso = total > 0 ? Math.round((processados / total) * 100) : 0;
+    const hasErrors = erros > 0;
 
     if (!isOpen) return null;
 
@@ -109,9 +110,9 @@ export const SimpleLabelProgressModal: React.FC<SimpleLabelProgressModalProps> =
                     )}
 
                     {concluido && (
-                        <div className="flex items-center justify-center gap-2 text-[#a3e635] font-mono text-[10px] uppercase tracking-widest py-2 bg-[#a3e635]/10 border border-[#a3e635]/20">
-                            <CheckCircle2 className="w-4 h-4" />
-                            <span>OPERAÇÃO FINALIZADA_ COM SUCESSO</span>
+                        <div className={`flex items-center justify-center gap-2 font-mono text-[10px] uppercase tracking-widest py-2 ${hasErrors ? 'text-[#ef4444] bg-[#ef4444]/10 border border-[#ef4444]/20' : 'text-[#a3e635] bg-[#a3e635]/10 border border-[#a3e635]/20'}`}>
+                            {hasErrors ? <XCircle className="w-4 h-4" /> : <CheckCircle2 className="w-4 h-4" />}
+                            <span>{hasErrors ? 'OPERACAO FINALIZADA_ COM FALHAS' : 'OPERACAO FINALIZADA_ COM SUCESSO'}</span>
                         </div>
                     )}
 

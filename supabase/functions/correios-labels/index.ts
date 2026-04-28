@@ -125,7 +125,10 @@ serve(async (req) => {
         const cleanCep = rawCep.replace(/\D/g, '');
         if (cleanCep.length !== 8) throw new Error(`CEP do cliente é inválido ("${cleanCep}"). Precisa ter 8 dígitos.`);
         
-        const cpfStr = String(orderData['Documento do Cliente'] || orderData.cliente_cpf || '0').replace(/\D/g, '');
+        const cpfStr = String(orderData['Documento do Cliente'] || orderData.cliente_cpf || orderData.documento_cliente || orderData.cpf || orderData.cnpj || '0').replace(/\D/g, '');
+        if (cpfStr.length !== 11 && cpfStr.length !== 14) {
+            throw new Error('Dados incompletos para gerar etiqueta: CPF/CNPJ.');
+        }
         const email = (orderData['E-mail do Cliente'] || orderData.cliente_email || 'email@naoinformado.com');
         
         const rawPhone = orderData['Telefone Cliente'] || orderData.cliente_telefone || '';
@@ -289,6 +292,11 @@ serve(async (req) => {
                 dstxcep: cleanCep,
                 dstxemail: email,
                 dstxcel: cell || "0",
+                dstxcpfcnpj: cpfStr,
+                dstcpfcnpj: cpfStr,
+                dstxdoc: cpfStr,
+                dstcpf: cpfStr.length === 11 ? cpfStr : "",
+                dstcnpj: cpfStr.length === 14 ? cpfStr : "",
                 dstxnfi: "00100005555",
                 impetq: "B2W",
                 // MeusCorreios falha com "Mini Envios". Sempre mapear para PAC ou SEDEX.

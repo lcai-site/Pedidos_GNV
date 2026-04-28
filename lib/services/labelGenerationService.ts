@@ -5,6 +5,64 @@ import { calcularDimensoes } from '../utils/packageDimensions';
 import type { PedidoParaEtiqueta, ResultadoEtiqueta } from '../types/labels';
 import { logger } from '../utils/logger';
 
+type PedidoEtiquetaLike = PedidoParaEtiqueta & Record<string, any>;
+
+const FIELD_KEYS = {
+    documento: ['cpf', 'cliente_cpf', 'cpf_cliente', 'customer_cpf', 'customer_cnpj', 'customer_document', 'documento', 'doc', 'document', 'tax_id', 'vat_number', 'cnpj'],
+    nome: ['nome_cliente', 'cliente_nome', 'cliente', 'nome', 'full_name', 'name', 'buyer_name', 'customer_name'],
+    telefone: ['telefone', 'cliente_telefone', 'phone', 'celular', 'whatsapp', 'phone_number', 'mobile'],
+    email: ['email_cliente', 'email', 'cliente_email', 'contact_email', 'buyer_email', 'user_email', 'mail', 'customer_email'],
+    cep: ['cep', 'cliente_cep', 'zip', 'zipcode', 'zip_code', 'postal_code'],
+    rua: ['logradouro', 'endereco_rua', 'rua', 'street', 'street_name', 'address_line_1', 'thoroughfare'],
+    numero: ['numero', 'endereco_numero', 'number', 'street_number', 'num', 'house_number', 'nr', 'n'],
+    complemento: ['complemento', 'endereco_complemento', 'comp', 'complement', 'address_line_2', 'extra'],
+    bairro: ['bairro', 'endereco_bairro', 'neighborhood', 'district', 'suburb'],
+    cidade: ['cidade', 'endereco_cidade', 'city', 'municipio', 'town'],
+    estado: ['estado', 'endereco_estado', 'uf', 'state', 'state_code', 'region']
+};
+
+const getFieldValue = (pedido: PedidoEtiquetaLike, keys: string[]): string => {
+    const targets = [
+        pedido,
+        pedido.metadata,
+        pedido.customer,
+        pedido.shipping,
+        pedido.address,
+        pedido.dados_entrega,
+        pedido.endereco_json,
+        pedido.payer,
+        pedido.metadata?.customer,
+        pedido.metadata?.buyer,
+        pedido.metadata?.address,
+        pedido.customer?.address,
+        pedido.shipping?.address
+    ];
+
+    for (const target of targets) {
+        if (!target || typeof target !== 'object') continue;
+        for (const key of keys) {
+            const value = target[key];
+            if (value !== undefined && value !== null && typeof value !== 'object' && String(value).trim() !== '') {
+                return String(value).trim();
+            }
+        }
+    }
+
+    return '';
+};
+
+const normalizeDocumento = (value: string): string => {
+    const digits = value.replace(/\D/g, '');
+    if (digits.length === 10 || digits.length === 13) return digits.padStart(digits.length + 1, '0');
+    return digits;
+};
+
+const getDocumentoPedido = (pedido: PedidoEtiquetaLike): string => normalizeDocumento(getFieldValue(pedido, FIELD_KEYS.documento));
+
+const getPedidoValue = (pedido: PedidoEtiquetaLike, keys: string[], fallback = ''): string => (
+    getFieldValue(pedido, keys) || fallback
+);
+
 export class LabelGenerationService {
     /**
      * Gera etiquetas para um produto específico
@@ -54,7 +112,7 @@ export class LabelGenerationService {
             if (onStart) onStart(pedidos.length);
 
             // 2. Processar cada pedido
-            for (const pedido of pedidos as PedidoParaEtiqueta[]) {
+            for (const pedido of pedidos as PedidoEtiquetaLike[]) {
                 // Verificar se deve cancelar
                 if (shouldCancel && shouldCancel()) {
                     logger.info('Geração cancelada pelo usuário', { service: 'LabelGenerationService' });
@@ -69,24 +127,26 @@ export class LabelGenerationService {
                     // ==========================================
                     if (provider === 'correios') {
                         const dimensoes = calcularDimensoes(pedido.descricao_pacote);
+                        const documento = getDocumentoPedido(pedido);
 
                         const payloadData = {
                             id: pedido.id,
-                            cep: pedido.cep || pedido.cliente_cep || '',
+                            cep: getPedidoValue(pedido, FIELD_KEYS.cep),
                             peso: String(dimensoes.weight * 1000),
                             comprimento: String(dimensoes.length),
                             largura: String(dimensoes.width),
                             altura: String(dimensoes.height),
-                            nome_cliente: pedido.nome_cliente || pedido.cliente_nome || '',
-                            cliente_cpf: pedido.cpf || pedido.cliente_cpf || '',
-                            endereco_rua: pedido.logradouro || pedido.endereco_rua || '',
-                            endereco_numero: pedido.numero || pedido.endereco_numero || '',
-                            endereco_complemento: pedido.complemento || pedido.endereco_complemento || '',
-                            endereco_bairro: pedido.bairro || pedido.endereco_bairro || '',
-                            endereco_cidade: pedido.cidade || pedido.endereco_cidade || '',
-                            endereco_estado: pedido.estado || pedido.endereco_estado || '',
-                            cliente_telefone: pedido.telefone || (pedido as any).cliente_telefone || '',
-                            cliente_email: pedido.email || pedido.cliente_email || '',
+                            nome_cliente: getPedidoValue(pedido, FIELD_KEYS.nome),
+                            cliente_cpf: documento,
+                            documento_cliente: documento,
+                            endereco_rua: getPedidoValue(pedido, FIELD_KEYS.rua),
+                            endereco_numero: getPedidoValue(pedido, FIELD_KEYS.numero),
+                            endereco_complemento: getPedidoValue(pedido, FIELD_KEYS.complemento),
+                            endereco_bairro: getPedidoValue(pedido, FIELD_KEYS.bairro),
+                            endereco_cidade: getPedidoValue(pedido, FIELD_KEYS.cidade),
+                            endereco_estado: getPedidoValue(pedido, FIELD_KEYS.estado),
+                            cliente_telefone: getPedidoValue(pedido, FIELD_KEYS.telefone),
+                            cliente_email: getPedidoValue(pedido, FIELD_KEYS.email),
                             produto_nome: pedido.descricao_pacote || pedido.nome_oferta || ''
                         };
 
@@ -147,7 +207,21 @@ export class LabelGenerationService {
                     // ==========================================
                     else {
                         const dimensoes = calcularDimensoes(pedido.descricao_pacote);
-                        const cotacoes = await melhorEnvioService.calcularFrete(pedido.cep, dimensoes);
+                        const pedidoNormalizado: PedidoParaEtiqueta = {
+                            ...pedido,
+                            cpf: getDocumentoPedido(pedido),
+                            nome_cliente: getPedidoValue(pedido, FIELD_KEYS.nome, pedido.nome_cliente),
+                            telefone: getPedidoValue(pedido, FIELD_KEYS.telefone, pedido.telefone || ''),
+                            email: getPedidoValue(pedido, FIELD_KEYS.email, pedido.email || ''),
+                            cep: getPedidoValue(pedido, FIELD_KEYS.cep, pedido.cep),
+                            logradouro: getPedidoValue(pedido, FIELD_KEYS.rua, pedido.logradouro || ''),
+                            numero: getPedidoValue(pedido, FIELD_KEYS.numero, pedido.numero || ''),
+                            complemento: getPedidoValue(pedido, FIELD_KEYS.complemento, pedido.complemento || ''),
+                            bairro: getPedidoValue(pedido, FIELD_KEYS.bairro, pedido.bairro || ''),
+                            cidade: getPedidoValue(pedido, FIELD_KEYS.cidade, pedido.cidade || ''),
+                            estado: getPedidoValue(pedido, FIELD_KEYS.estado, pedido.estado || '')
+                        };
+                        const cotacoes = await melhorEnvioService.calcularFrete(pedidoNormalizado.cep, dimensoes);
                         if (cotacoes.length === 0) {
                             throw new Error('Nenhuma transportadora disponível no Melhor Envio');
                         }
@@ -156,7 +230,7 @@ export class LabelGenerationService {
                         const melhorCotacao = cotacoesOrdenadas[0];
 
                         const carrinhoId = await melhorEnvioService.adicionarAoCarrinho(
-                            pedido,
+                            pedidoNormalizado,
                             melhorCotacao.id,
                             dimensoes
                         );
@@ -176,8 +250,8 @@ export class LabelGenerationService {
 
                     // Registrar sucesso local pra tabela do componente UI
                     const resultado: ResultadoEtiqueta = {
-                        cpf: pedido.cpf || pedido.cliente_cpf || '',
-                        nome: pedido.nome_cliente || pedido.cliente_nome || '',
+                        cpf: getDocumentoPedido(pedido),
+                        nome: getPedidoValue(pedido, FIELD_KEYS.nome),
                         status: 'sucesso',
                         codigo_rastreio: codigoRastreio
                     };
@@ -195,7 +269,7 @@ export class LabelGenerationService {
                 } catch (error: any) {
                     logger.error(`Erro ao processar pedido`, error, {
                         service: 'LabelGenerationService',
-                        cpf: pedido.cpf,
+                        cpf: getDocumentoPedido(pedido),
                         provider
                     });
 
@@ -203,8 +277,8 @@ export class LabelGenerationService {
                     let sugestaoIA: string | undefined;
                     try {
                         sugestaoIA = await aiAnalysisService.analisarErro({
-                            cpf: pedido.cpf || pedido.cliente_cpf,
-                            nome: pedido.nome_cliente || pedido.cliente_nome,
+                            cpf: getDocumentoPedido(pedido),
+                            nome: getPedidoValue(pedido, FIELD_KEYS.nome),
                             endereco: pedido.endereco_completo || '',
                             erro: error.message
                         });
@@ -222,8 +296,8 @@ export class LabelGenerationService {
                                 headers: { 'Content-Type': 'application/json' },
                                 body: JSON.stringify({
                                     pedidoId: pedido.id,
-                                    nome: pedido.nome_cliente || pedido.cliente_nome,
-                                    cpf: pedido.cpf || pedido.cliente_cpf,
+                                    nome: getPedidoValue(pedido, FIELD_KEYS.nome),
+                                    cpf: getDocumentoPedido(pedido),
                                     transportadora: provider,
                                     erro: error.message,
                                     sugestao_ia: sugestaoIA,
@@ -247,8 +321,8 @@ export class LabelGenerationService {
 
                     // Registrar erro
                     const resultado: ResultadoEtiqueta = {
-                        cpf: pedido.cpf || pedido.cliente_cpf,
-                        nome: pedido.nome_cliente || pedido.cliente_nome,
+                        cpf: getDocumentoPedido(pedido) || pedido.id,
+                        nome: getPedidoValue(pedido, FIELD_KEYS.nome),
                         status: 'erro',
                         mensagem: error.message,
                         sugestao_ia: sugestaoIA
