@@ -16,6 +16,7 @@ export interface PedidoUnificado {
   codigos_agrupados: string | string[]; // Pode vir como array do JSONB ou string
   codigo_rastreio: string | null;
   observacao?: string; // Campo novo para notas internas
+  error_geracao_etiqueta?: boolean; // Marca observacoes geradas por erro na emissao da etiqueta
   foi_editado?: boolean; // Campo novo para marcar edição manual
   campos_alterados?: string[]; // Lista de campos que foram modificados (ex: ['Endereço', 'Telefone'])
 

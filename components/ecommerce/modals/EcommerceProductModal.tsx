@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { X, Package, Save } from 'lucide-react';
 import { useCreateEcommerceProduct, useUpdateEcommerceProduct } from '../../../lib/hooks/useEcommerceProducts';
-import type { EcommerceProduct } from '../../../types/ecommerce';
+import type { EcommerceProduct, ProductStatus } from '../../../types/ecommerce';
 
 interface EcommerceProductModalProps {
   isOpen: boolean;
   onClose: () => void;
   productToEdit?: EcommerceProduct | null;
 }
+
+type ProductFormData = Omit<EcommerceProduct, 'id' | 'created_at' | 'updated_at'>;
 
 export const EcommerceProductModal: React.FC<EcommerceProductModalProps> = ({
   isOpen,
@@ -20,7 +22,7 @@ export const EcommerceProductModal: React.FC<EcommerceProductModalProps> = ({
   const isPending = isCreating || isUpdating;
   const isEditMode = !!productToEdit;
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<ProductFormData>({
     nome: '',
     descricao: '',
     sku: '',
@@ -69,7 +71,11 @@ export const EcommerceProductModal: React.FC<EcommerceProductModalProps> = ({
     const { name, value, type } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: type === 'number' ? Number(value) : value
+      [name]: name === 'status'
+        ? value as ProductStatus
+        : type === 'number'
+          ? Number(value)
+          : value
     }));
   };
 
